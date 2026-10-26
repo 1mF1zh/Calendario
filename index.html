@@ -1,0 +1,1963 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- La página solo puede conectarse con Google (inicio de sesión y Drive para sincronizar).
+     Cualquier otra conexión o carga externa está bloqueada. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; connect-src https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#2f5bd3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calendario">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Calendario</title>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --surface-2:#f0eee9; --text:#1d1c1a; --muted:#6b6862; --line:#e3e0d9;
+  --accent:#2f5bd3; --accent-soft:#e6ecfb;
+  --nac:#c8372d; --nac-soft:#fbe7e4;
+  --cat:#a86a0c; --cat-soft:#fbf0d9;
+  --local:#2a8a5c; --local-soft:#dff3e9;
+  --dst:#7a3fb8; --dst-soft:#efe5fa;
+  --weekend:#8a867e;
+  --row:48px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#131313; --surface:#1c1c1b; --surface-2:#252523; --text:#ecebe7; --muted:#9a968e; --line:#33322f;
+    --accent:#7c9bff; --accent-soft:#1e2847;
+    --nac:#ff7a6e; --nac-soft:#3a1f1c;
+    --cat:#f0b44c; --cat-soft:#382c14;
+    --local:#5fd19a; --local-soft:#16332a;
+    --dst:#c39bff; --dst-soft:#2c2140;
+    --weekend:#8d8a83;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,select,textarea{font:inherit;color:inherit}
+
+/* ---------- Cabecera ---------- */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.nav{display:flex;align-items:center;gap:6px}
+.btn{border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--surface)}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.35;cursor:default;background:var(--surface)}
+.btn.icon{padding:6px 10px;font-size:16px;line-height:1}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--nac);border-color:color-mix(in srgb,var(--nac) 40%,var(--line))}
+.btn.sm{padding:3px 9px;font-size:12px}
+#title{font-size:18px;font-weight:600;margin:0;min-width:0}
+.views{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:auto}
+.views button{padding:6px 12px;border-right:1px solid var(--line)}
+.views button:last-child{border-right:0}
+.views button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap}
+.clock b{color:var(--text);font-weight:600}
+
+main{flex:1;min-height:0;padding:16px;overflow:auto}
+
+/* ---------- Leyenda ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* ---------- Vista año ---------- */
+.year-wrap{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+.year{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.mini h3{margin:0 0 8px;font-size:14px;font-weight:600}
+.mini h3 button:hover{color:var(--accent)}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px}
+.mini-grid .wd{color:var(--muted);font-size:11px;padding-bottom:2px}
+.mini-grid button{aspect-ratio:1;border-radius:6px;position:relative;font-variant-numeric:tabular-nums}
+.mini-grid button:hover{background:var(--surface-2)}
+.we{color:var(--weekend)}
+.h-nac{background:var(--nac-soft);color:var(--nac);font-weight:600}
+.h-cat{background:var(--cat-soft);color:var(--cat);font-weight:600}
+.h-local{background:var(--local-soft);color:var(--local);font-weight:600}
+.h-mine{font-weight:600}
+.is-today{outline:2px solid var(--accent);outline-offset:-2px}
+.mini-grid .dst::after{content:"";position:absolute;right:3px;top:3px;width:5px;height:5px;border-radius:50%;background:var(--dst)}
+.mini-grid .has-task::before{content:"";position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--accent)}
+.mini-grid .bday{box-shadow:inset 0 0 0 2px var(--bd)}
+
+.side{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;position:sticky;top:0}
+.side h2{font-size:14px;margin:0 0 8px}
+.side h2:not(:first-child){margin-top:18px}
+.hlist{list-style:none;margin:0;padding:0;font-size:13px}
+.hlist li{display:grid;grid-template-columns:70px 1fr;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.hlist li:first-child{border-top:0}
+.hlist button{text-align:left}
+.hlist button:hover{color:var(--accent)}
+.hlist .when{color:var(--muted);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;margin-left:4px;vertical-align:1px}
+.tag.nac{background:var(--nac-soft);color:var(--nac)}
+.tag.cat{background:var(--cat-soft);color:var(--cat)}
+.tag.local{background:var(--local-soft);color:var(--local)}
+.tag.dst{background:var(--dst-soft);color:var(--dst)}
+.note{font-size:12px;color:var(--muted);margin:14px 0 0}
+.sub{color:var(--muted);font-size:12px}
+
+/* ---------- Vista mes ---------- */
+.month{display:grid;grid-template-columns:36px repeat(7,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.month .wd{padding:8px;font-size:12px;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);text-transform:capitalize}
+.month .wk{font-size:11px;color:var(--muted);padding:8px 4px;text-align:center;border-top:1px solid var(--line);background:var(--surface-2)}
+.mcell{min-height:110px;padding:6px 8px;border-top:1px solid var(--line);border-left:1px solid var(--line);text-align:left;display:flex;flex-direction:column;gap:3px;align-items:stretch;cursor:pointer;min-width:0}
+.mcell:hover{filter:brightness(.97)}
+.mcell.out{opacity:.4}
+.mcell.h-nac,.mcell.h-cat,.mcell.h-local,.mcell.h-mine{font-weight:400}
+.mcell .num{font-weight:600;font-variant-numeric:tabular-nums;width:26px;height:26px;display:grid;place-items:center;border-radius:50%}
+.mcell.is-today{outline:none}
+.mcell.is-today .num{background:var(--accent);color:#fff}
+.mcell.weekend .num{color:var(--weekend)}
+.mcell.h-nac .num,.mcell.h-cat .num,.mcell.h-local .num,.mcell.h-mine .num{color:inherit}
+.mcell.is-today.weekend .num,.mcell.is-today .num{color:#fff}
+.chip{font-size:11px;padding:2px 6px;border-radius:5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:flex-start}
+.chip.nac{background:var(--nac-soft);color:var(--nac)}
+.chip.cat{background:var(--cat-soft);color:var(--cat)}
+.chip.local{background:var(--local-soft);color:var(--local)}
+.chip.dst{background:var(--dst-soft);color:var(--dst)}
+.chip[data-edit]{cursor:pointer}
+.mcell.h-mine .fchip{background:none !important}
+.month{user-select:none}
+.mcell.msel{box-shadow:inset 0 0 0 999px color-mix(in srgb,var(--accent) 20%,transparent),inset 0 0 0 2px var(--accent)}
+.chip.tchip.done{text-decoration:line-through;opacity:.6}
+.echip{font-size:11px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:4px;padding:1px 3px;color:var(--text)}
+.echip:hover{background:var(--surface)}
+.echip i{flex:none;width:7px;height:7px;border-radius:50%}
+.echip.done{text-decoration:line-through;color:var(--muted)}
+.more{font-size:11px;color:var(--muted);padding-left:3px}
+
+/* ---------- Vistas con horas (semana / día) ---------- */
+.timegrid{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px);user-select:none}
+.tg{display:grid;min-width:max-content}
+.week .tg{grid-template-columns:64px repeat(7,minmax(110px,1fr));min-width:834px}
+.tg-head{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding:8px;text-align:left;min-height:64px}
+.tg-head.corner{left:0;z-index:6;font-size:11px;color:var(--muted)}
+.tg-head .d{font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.tg-head .n{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;display:inline-grid;place-items:center;min-width:32px;height:32px;border-radius:50%}
+.tg-head.is-today{outline:none}
+.tg-head.is-today .n{background:var(--accent);color:#fff}
+.tg-head .chip{display:block;margin-top:2px}
+.tg-head[data-go]{cursor:pointer}
+.tg-head[data-go]:hover{background:var(--surface-2)}
+.times{position:sticky;left:0;z-index:4;background:var(--surface);border-right:1px solid var(--line)}
+.tlabel{height:var(--row);padding:2px 8px 0 0;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;position:relative}
+.col{position:relative;border-left:1px solid var(--line)}
+.col.hol.nac{background:color-mix(in srgb,var(--nac-soft) 55%,transparent)}
+.col.hol.cat{background:color-mix(in srgb,var(--cat-soft) 60%,transparent)}
+.col.hol.local{background:color-mix(in srgb,var(--local-soft) 60%,transparent)}
+.col.weekend{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+.slot{height:var(--row);border-top:1px solid var(--line);position:relative;cursor:cell}
+.slot:hover{background:color-mix(in srgb,var(--accent-soft) 50%,transparent)}
+.slot.night{background:color-mix(in srgb,var(--surface-2) 40%,transparent)}
+.slot.missing{background:repeating-linear-gradient(45deg,var(--dst-soft) 0 6px,transparent 6px 12px)}
+.slot .slot-note{position:absolute;inset:4px 6px auto;font-size:10px;color:var(--dst);font-weight:600}
+.slot.repeat{box-shadow:inset 3px 0 0 var(--dst)}
+.nowline{position:absolute;left:0;right:0;height:2px;background:var(--nac);z-index:3;pointer-events:none}
+.nowline::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--nac)}
+.sel{position:absolute;left:2px;right:2px;z-index:4;pointer-events:none;border:2px solid var(--accent);border-radius:6px;background:color-mix(in srgb,var(--accent) 22%,transparent);font-size:12px;font-weight:600;padding:2px 6px;color:var(--text);font-variant-numeric:tabular-nums}
+
+/* Bloques de tareas y rutinas */
+.ev{position:absolute;z-index:2;border-radius:6px;padding:3px 6px;font-size:11px;line-height:1.25;overflow:hidden;cursor:pointer;border:1px solid var(--surface);text-align:left}
+.ev b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev span{opacity:.85;white-space:nowrap}
+.ev.task{color:var(--text);border-left-width:3px}
+.ev.task input{float:left;margin:1px 5px 0 0;cursor:pointer}
+.ev.done{opacity:.55}
+.ev.done b{text-decoration:line-through}
+.ev:hover{filter:brightness(1.05);z-index:3}
+
+.day-wrap{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+.day .tg{grid-template-columns:110px 1fr;min-width:0}
+.day .tlabel{height:var(--row);border-top:1px solid var(--line);padding:6px 10px;text-align:right}
+.day .tlabel b{display:block;font-size:13px;color:var(--text);font-weight:600}
+.day .tlabel.cur b{color:var(--nac)}
+.day .slot.cur{background:color-mix(in srgb,var(--accent-soft) 60%,transparent)}
+.banner{border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px}
+.banner.nac{background:var(--nac-soft);color:var(--nac)}
+.banner.cat{background:var(--cat-soft);color:var(--cat)}
+.banner.local{background:var(--local-soft);color:var(--local)}
+.banner.dst{background:var(--dst-soft);color:var(--dst)}
+.banner[data-edit]{cursor:pointer}
+.banner p{margin:4px 0 0;opacity:.9;white-space:pre-wrap}
+.facts{list-style:none;padding:0;margin:0;font-size:13px}
+.facts li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line)}
+.facts li:first-child{border-top:0}
+.facts span:first-child{color:var(--muted)}
+
+/* ---------- Listas de elementos ---------- */
+.items{list-style:none;margin:0;padding:0}
+.items li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.items li:first-child{border-top:0}
+.items .grow{flex:1;min-width:0}
+.items b{display:block;font-weight:600;overflow-wrap:anywhere}
+.items p{margin:3px 0 0;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.items input[type=checkbox]{margin-top:3px;cursor:pointer}
+.items .done b{text-decoration:line-through;color:var(--muted)}
+.items .dot{flex:none;width:12px;height:12px;border-radius:4px;margin-top:3px}
+.items .empty{color:var(--muted);border-top:0}
+.items .cancel{color:var(--muted);text-decoration:line-through}
+.list-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.list-wrap .side{position:static}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.toolbar .spacer{flex:1}
+
+/* ---------- Formulario ---------- */
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--surface);color:var(--text);width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+#form{padding:18px;display:flex;flex-direction:column;gap:12px}
+#form h2{margin:0;font-size:17px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.field input:not([type=checkbox]):not([type=color]),.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg);font-size:14px;width:100%}
+.field textarea{resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.types{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.types label{flex:1;text-align:center;padding:7px 4px;cursor:pointer;border-right:1px solid var(--line);font-size:13px}
+.types label:last-child{border-right:0}
+.types input{position:absolute;opacity:0;pointer-events:none}
+.types label:has(input:checked){background:var(--accent);color:#fff}
+.days{display:flex;gap:4px;flex-wrap:wrap}
+.days label{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;color:var(--text)}
+.days input{position:absolute;opacity:0;pointer-events:none}
+.days label:has(input:checked){background:var(--accent);border-color:var(--accent);color:#fff}
+.days label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.quick{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.colors{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.colors button{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.colors input{width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 2px;background:var(--bg)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text);cursor:pointer}
+.check input{margin-top:2px;accent-color:var(--accent)}
+.check small{display:block;color:var(--muted);font-size:12px}
+.err{color:var(--nac);font-size:13px;margin:0}
+.err:empty{display:none}
+.actions{display:flex;gap:8px;align-items:center}
+.actions .spacer{flex:1}
+[hidden]{display:none !important}
+
+/* ---------- Sincronización ---------- */
+.sync{position:relative;display:inline-grid;place-items:center}
+.sync svg{display:block}
+.sdot{position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--surface);display:none}
+.sync[data-state=ok] .sdot{display:block;background:#30a46c}
+.sync[data-state=syncing] .sdot{display:block;background:var(--accent);animation:pulse 1s infinite alternate}
+.sync[data-state=reauth] .sdot{display:block;background:#f0a000}
+.sync[data-state=error] .sdot{display:block;background:var(--nac)}
+.sync[data-state=offline] .sdot{display:block;background:var(--muted)}
+@keyframes pulse{to{opacity:.3}}
+.syncbox{padding:18px;display:flex;flex-direction:column;gap:12px;font-size:14px}
+.syncbox h2{margin:0;font-size:17px}
+.syncbox p{margin:0}
+.syncbox .state{display:flex;align-items:center;gap:8px;font-weight:600}
+.syncbox .state i{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.syncbox .msg{color:var(--nac);font-size:13px}
+.syncbox .msg:empty{display:none}
+.syncbox .btns{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ---------- Puntos de la vista mes en el móvil ---------- */
+.mdots{display:none;gap:3px;flex-wrap:wrap;justify-content:center}
+.mdots i{width:6px;height:6px;border-radius:50%}
+.month .ws{display:none}
+.timegrid,.month{-webkit-touch-callout:none;-webkit-user-select:none}
+button,.mcell,.slot,.tg-head{touch-action:manipulation}
+.timegrid{max-height:calc(100dvh - var(--hdr, 60px) - 90px)}
+
+@media (max-width:900px){
+  .year-wrap,.day-wrap{grid-template-columns:1fr}
+  .side{position:static}
+  .views{margin-left:0}
+  .mcell{min-height:72px;padding:4px}
+  .mcell .chip,.mcell .echip,.mcell .more{display:none}
+  .mdots{display:flex}
+  .month{grid-template-columns:24px repeat(7,minmax(0,1fr))}
+}
+
+/* ---------- Móvil ---------- */
+@media (max-width:700px){
+  body{font-size:15px}
+  header{gap:8px;padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left))}
+  .nav{order:1}
+  #title{order:2;flex:1;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #syncBtn{order:3}
+  .views{order:4;width:100%}
+  .views button{flex:1;padding:8px 2px}
+  .clock{display:none}
+  .btn{padding:8px 14px}
+  .btn.icon{padding:8px 12px}
+  #new{position:fixed;z-index:30;right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;padding:0;border-radius:50%;font-size:0;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+  #new::before{content:"+";font-size:30px;line-height:1}
+  main{padding:10px calc(10px + env(safe-area-inset-right)) calc(90px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
+  .legend{display:none}
+  .note{margin-top:10px}
+
+  .year{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .mini{padding:8px;border-radius:10px}
+  .mini h3{font-size:13px;margin-bottom:4px}
+  .mini-grid{font-size:11px;gap:1px}
+
+  .month{grid-template-columns:repeat(7,minmax(0,1fr));border-radius:10px}
+  .month .wk,.month .wk0{display:none}
+  .month .wd{padding:6px 2px;text-align:center;font-size:11px}
+  .month .wl{display:none}
+  .month .ws{display:inline}
+  .mcell{min-height:62px;padding:3px 2px;align-items:center;gap:4px}
+  .mcell .num{width:26px;height:26px;font-size:13px}
+
+  .timegrid{max-height:calc(100dvh - var(--hdr, 100px) - 24px - env(safe-area-inset-bottom))}
+  .week .tg{grid-template-columns:44px repeat(7,minmax(76px,1fr));min-width:576px}
+  .tg-head{padding:6px 4px;min-height:54px}
+  .tg-head .n{font-size:16px;min-width:26px;height:26px}
+  .tg-head.corner{font-size:0}
+  .tlabel{padding-right:4px;font-size:10px}
+  .day .timegrid{max-height:none;overflow:visible}
+  .day .tg{grid-template-columns:70px 1fr}
+  .day .tlabel{padding:4px 6px;font-size:10px}
+  .ev{padding:2px 4px;font-size:10px}
+  .ev b{font-size:11px}
+  .side{padding:12px}
+  .toolbar .btn{flex:1 1 auto}
+  .items li{padding:11px 0}
+
+  dialog{width:100vw;max-width:100vw;max-height:92dvh;margin:auto auto 0;border-radius:16px 16px 0 0;border-bottom:0}
+  #form{padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+  .syncbox{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  /* 16px evita que el iPhone haga zoom al tocar un campo */
+  .field input:not([type=checkbox]):not([type=color]),.field select,.field textarea{font-size:16px;padding:10px}
+  .types label{padding:10px 2px}
+  .days label{width:40px;height:40px}
+  .colors button{width:30px;height:30px}
+  .check input{width:20px;height:20px}
+}
+@media (max-width:560px){
+  .row2{grid-template-columns:1fr}
+}
+@media (hover:none){
+  .slot:hover,.echip:hover{background:inherit}
+  .mcell:hover,.ev:hover{filter:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <button class="btn icon" id="prev" aria-label="Anterior" title="Anterior (←)">‹</button>
+    <button class="btn" id="today" title="Hoy (T)">Hoy</button>
+    <button class="btn icon" id="next" aria-label="Siguiente" title="Siguiente (→)">›</button>
+  </div>
+  <h1 id="title"></h1>
+  <button class="btn icon sync" id="syncBtn" title="Sincronización con Google Drive" aria-label="Sincronización con Google Drive">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 11a4 4 0 0 1-1.5 8z"/></svg><i class="sdot"></i>
+  </button>
+  <button class="btn primary" id="new" title="Nuevo (N)" aria-label="Nuevo">+ Nuevo</button>
+  <div class="views" role="group" aria-label="Vista">
+    <button data-view="year" title="Año (A)">Año</button>
+    <button data-view="month" title="Mes (M)">Mes</button>
+    <button data-view="week" title="Semana (S)">Semana</button>
+    <button data-view="day" title="Día (D)">Día</button>
+    <button data-view="list" title="Lista (L)">Lista</button>
+  </div>
+  <div class="clock" id="clock"></div>
+</header>
+<main id="main"></main>
+
+<dialog id="dlg">
+  <form id="form" novalidate>
+    <h2 id="dlgTitle"></h2>
+    <div class="types" id="types" role="radiogroup" aria-label="Tipo">
+      <label><input type="radio" name="type" value="task">Tarea</label>
+      <label><input type="radio" name="type" value="routine">Rutina</label>
+      <label><input type="radio" name="type" value="festivo">Festivo</label>
+      <label><input type="radio" name="type" value="birthday">Cumpleaños</label>
+    </div>
+
+    <label class="field"><span id="nameLbl">Nombre</span> <input name="title" maxlength="80" autocomplete="off"></label>
+    <label class="field" data-for="task routine festivo">Descripción <textarea name="desc" rows="3" maxlength="1000"></textarea></label>
+
+    <div class="row2">
+      <label class="field" data-for="task festivo birthday"><span id="dateLbl">Fecha</span> <input type="date" name="date"></label>
+      <label class="field" data-for="task routine">Hora de inicio <input type="time" name="time" step="900"></label>
+    </div>
+    <div class="row2">
+      <label class="field" data-for="task festivo">Fecha de fin <input type="date" name="endDate"></label>
+      <label class="field" data-for="task routine">Hora de fin <input type="time" name="endTime" step="900"></label>
+    </div>
+    <p class="sub" data-for="routine" style="margin:-4px 0 0">Si la hora de fin es anterior o igual a la de inicio, la rutina termina al día siguiente.</p>
+
+    <div class="field" data-for="routine">Se repite los
+      <div class="days" id="days"></div>
+      <div class="quick">
+        <button type="button" class="btn sm" data-days="0,1,2,3,4">L–V</button>
+        <button type="button" class="btn sm" data-days="0,1,2,3">L–J</button>
+        <button type="button" class="btn sm" data-days="5,6">Fin de semana</button>
+        <button type="button" class="btn sm" data-days="0,1,2,3,4,5,6">Todos</button>
+      </div>
+    </div>
+
+    <div class="row2" data-for="routine">
+      <label class="field">Desde <input type="date" name="from"></label>
+      <label class="field">Hasta (opcional) <input type="date" name="until"></label>
+    </div>
+
+    <div class="field">Color
+      <div class="colors" id="colors"><input type="color" name="color" aria-label="Color personalizado"></div>
+    </div>
+
+    <label class="check" data-for="routine"><input type="checkbox" name="skip">
+      <span>No contar esta rutina en días festivos<small>No aparecerá en festivos nacionales, de Cataluña, locales ni en tus festivos personales.</small></span></label>
+
+    <p class="sub" data-for="festivo" style="margin:0">Cada día dura entero (00:00–24:00). Para varios días seguidos, pon una fecha de fin posterior. Cancela esos días las rutinas que tengan activado «No contar en días festivos».</p>
+    <p class="sub" data-for="birthday" style="margin:0">Se repite cada año el mismo día. Si es el 29 de febrero, en los años no bisiestos aparece el 28.</p>
+
+    <label class="check" data-for="task"><input type="checkbox" name="done"><span>Hecha</span></label>
+
+    <p class="err" id="err" role="alert"></p>
+    <div class="actions">
+      <button type="button" class="btn danger" id="del">Eliminar</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="cancel">Cancelar</button>
+      <button type="submit" class="btn primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="syncDlg">
+  <div class="syncbox">
+    <h2>Sincronización con Google Drive</h2>
+    <div id="syncBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div class="actions"><span class="spacer"></span><button type="button" class="btn" id="syncClose">Cerrar</button></div>
+  </div>
+</dialog>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN
+   ===================================================================== */
+// Nombre con el que se guardan los datos en el navegador. Dos copias de esta página con
+// nombres distintos tienen datos separados aunque se abran en el mismo ordenador.
+const CLAVE_DATOS = 'calendario.datos.v1';
+
+// Sincronización con Google Drive: pega aquí el «ID de cliente» que crees en Google Cloud
+// (los pasos están en INSTRUCCIONES.md). Vacío = la página funciona igual, sin sincronizar.
+const GOOGLE_CLIENT_ID = '';
+
+// Años que abarca el calendario
+const AÑO_MIN = 2026;
+const AÑO_MAX = 2050;
+
+// Festivos locales de tu municipio (2 al año en Cataluña) y ajustes
+// puntuales si la Generalitat traslada algún festivo un año concreto.
+const FESTIVOS_EXTRA = [
+  // { fecha: '2026-09-24', nombre: 'La Mercè', tipo: 'local' },
+];
+const FESTIVOS_QUITAR = [
+  // '2027-12-06',
+];
+
+/* ===================================================================== */
+const TZ = 'Europe/Madrid';
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+const DIAS_INI = ['L','M','X','J','V','S','D'];
+const TIPO = { nac: 'Nacional', cat: 'Cataluña', local: 'Local' };
+const OFFSET = { CET: 'UTC+1', CEST: 'UTC+2' };
+const DAY = 86400000;
+const COLORES = ['#e5484d','#f76b15','#e2a300','#30a46c','#12a594','#0090ff','#3e63dd','#8e4ec6','#d6409f','#8d8d86'];
+const COLOR_DEFECTO = { task: '#0090ff', routine: '#3e63dd', festivo: '#d6409f', birthday: '#f76b15' };
+const TAREA_MAX_MIN = 12 * 10080; // 12 semanas
+
+// Las fechas se manejan como medianoche UTC para que no influya la zona del ordenador.
+const D = (y, m, d) => new Date(Date.UTC(y, m, d));
+const addDays = (dt, n) => new Date(dt.getTime() + n * DAY);
+const dow = dt => (dt.getUTCDay() + 6) % 7; // 0 = lunes
+const key = dt => dt.toISOString().slice(0, 10);
+const same = (a, b) => a.getTime() === b.getTime();
+const pad = n => String(n).padStart(2, '0');
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const daysInMonth = (y, m) => D(y, m + 1, 0).getUTCDate();
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return D(y, m - 1, d); };
+const shortDate = dt => `${dt.getUTCDate()} ${MESES[dt.getUTCMonth()].slice(0, 3)}`;
+const longDate = dt => `${DIAS[dow(dt)]}, ${dt.getUTCDate()} de ${MESES[dt.getUTCMonth()]} de ${dt.getUTCFullYear()}`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const hm = abs => { const m = ((abs % 1440) + 1440) % 1440; return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
+const absToDate = abs => new Date(Math.floor(abs / 1440) * DAY);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const isDateStr = s => /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+const MIN_DATE = D(AÑO_MIN, 0, 1), MAX_DATE = D(AÑO_MAX, 11, 31);
+const MIN_KEY = key(MIN_DATE), MAX_KEY = key(MAX_DATE);
+const clampDate = dt => dt < MIN_DATE ? MIN_DATE : dt > MAX_DATE ? MAX_DATE : dt;
+const validKey = k => isDateStr(k) && k >= MIN_KEY && k <= MAX_KEY;
+
+// Estilo "suave" de un color elegido por la persona: el mismo tratamiento que los festivos oficiales
+const softText = c => `color-mix(in srgb, ${c} 72%, var(--text))`;
+const softStyle = c => `background:${c}2e;color:${softText(c)}`;
+const colTint = c => `${c}26`;
+
+function fmtDur(min) {
+  const parts = [];
+  const w = Math.floor(min / 10080); min %= 10080;
+  const d = Math.floor(min / 1440); min %= 1440;
+  const h = Math.floor(min / 60), m = min % 60;
+  if (w) parts.push(w + (w === 1 ? ' semana' : ' semanas'));
+  if (d) parts.push(d + (d === 1 ? ' día' : ' días'));
+  if (h) parts.push(h + ' h');
+  if (m) parts.push(m + ' min');
+  return parts.join(' ') || '0 min';
+}
+
+function addMonths(dt, n) {
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + n;
+  const t = D(y, m, 1);
+  return D(t.getUTCFullYear(), t.getUTCMonth(), Math.min(dt.getUTCDate(), daysInMonth(t.getUTCFullYear(), t.getUTCMonth())));
+}
+
+function isoWeek(dt) {
+  const thu = addDays(dt, 3 - dow(dt));
+  return Math.floor((thu - D(thu.getUTCFullYear(), 0, 1)) / DAY / 7) + 1;
+}
+
+// Domingo de Pascua (algoritmo gregoriano anónimo)
+function easter(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+  return D(y, month - 1, day);
+}
+
+function lastSunday(y, m) {
+  const d = D(y, m + 1, 0);
+  return addDays(d, -d.getUTCDay());
+}
+
+const yearCache = new Map();
+function yearInfo(y) {
+  if (yearCache.has(y)) return yearCache.get(y);
+  const e = easter(y);
+  const quitar = new Set(FESTIVOS_QUITAR);
+  const list = [
+    [D(y, 0, 1),  'Año Nuevo', 'nac'],
+    [D(y, 0, 6),  'Epifanía del Señor (Reyes)', 'nac'],
+    [addDays(e, -2), 'Viernes Santo', 'nac'],
+    [addDays(e, 1),  'Lunes de Pascua', 'cat'],
+    [D(y, 4, 1),  'Fiesta del Trabajo', 'nac'],
+    [D(y, 5, 24), 'Sant Joan', 'cat'],
+    [D(y, 7, 15), 'Asunción de la Virgen', 'nac'],
+    [D(y, 8, 11), 'Diada Nacional de Catalunya', 'cat'],
+    [D(y, 9, 12), 'Fiesta Nacional de España', 'nac'],
+    [D(y, 10, 1), 'Todos los Santos', 'nac'],
+    [D(y, 11, 6), 'Día de la Constitución', 'nac'],
+    [D(y, 11, 8), 'Inmaculada Concepción', 'nac'],
+    [D(y, 11, 25), 'Navidad', 'nac'],
+    [D(y, 11, 26), 'Sant Esteve', 'cat'],
+    ...FESTIVOS_EXTRA.filter(f => f.fecha.startsWith(y + '-')).map(f => [fromKey(f.fecha), f.nombre, f.tipo || 'local']),
+  ]
+    .map(([date, name, scope]) => ({ date, name, scope }))
+    .filter(h => !quitar.has(key(h.date)))
+    .sort((a, b) => a.date - b.date);
+
+  const byKey = new Map();
+  for (const h of list) {
+    const k = key(h.date);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(h);
+  }
+  const info = { holidays: list, byKey, spring: lastSunday(y, 2), fall: lastSunday(y, 9) };
+  yearCache.set(y, info);
+  return info;
+}
+
+const holidaysOf = dt => yearInfo(dt.getUTCFullYear()).byKey.get(key(dt)) || [];
+const mainScope = hs => hs.length ? hs[0].scope : null;
+
+// 'spring' = se adelanta la hora, 'fall' = se atrasa, si no 'CET' / 'CEST'
+function dayZone(dt) {
+  const { spring, fall } = yearInfo(dt.getUTCFullYear());
+  if (same(dt, spring)) return 'spring';
+  if (same(dt, fall)) return 'fall';
+  return dt > spring && dt < fall ? 'CEST' : 'CET';
+}
+
+// Horas reales del día en horario peninsular (23 en marzo, 25 en octubre)
+function hourSlots(dt) {
+  const z = dayZone(dt), out = [];
+  for (let h = 0; h < 24; h++) {
+    if (z === 'spring') {
+      if (h === 2) continue; // 02:00 CET pasa a ser 03:00 CEST
+      out.push({ h, zone: h < 2 ? 'CET' : 'CEST', note: h === 3 ? 'A las 02:00 se adelanta a las 03:00' : '' });
+    } else if (z === 'fall') {
+      if (h === 2) {
+        out.push({ h, zone: 'CEST', note: '' });
+        out.push({ h, zone: 'CET', note: 'Se repite: a las 03:00 vuelve a ser las 02:00', repeat: true });
+      } else out.push({ h, zone: h < 2 ? 'CEST' : 'CET', note: '' });
+    } else out.push({ h, zone: z, note: '' });
+  }
+  return out;
+}
+
+const nowFmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+});
+function madridNow() {
+  const now = new Date();
+  const p = {};
+  for (const x of nowFmt.formatToParts(now)) p[x.type] = x.value;
+  const y = +p.year, m = +p.month - 1, d = +p.day, h = +p.hour, mi = +p.minute, s = +p.second;
+  const off = Math.round((Date.UTC(y, m, d, h, mi, s) - Math.floor(now.getTime() / 1000) * 1000) / 3600000);
+  return { date: D(y, m, d), h, mi, s, zone: off === 2 ? 'CEST' : 'CET' };
+}
+
+/* =====================================================================
+   DATOS: tareas, rutinas, festivos personales y cumpleaños (guardados en el navegador)
+   ===================================================================== */
+const STORE_KEY = CLAVE_DATOS;
+const COLLECTION = { task: 'tasks', routine: 'routines', festivo: 'festivos', birthday: 'birthdays' };
+const NUEVO = { task: 'Nueva tarea', routine: 'Nueva rutina', festivo: 'Nuevo festivo', birthday: 'Nuevo cumpleaños' };
+const EDITAR = { task: 'Editar tarea', routine: 'Editar rutina', festivo: 'Editar festivo', birthday: 'Editar cumpleaños' };
+// Cada elemento lleva «updated» (cuándo se modificó) y los borrados se anotan en «deleted»,
+// así se pueden unir los cambios hechos en varios dispositivos sin perder ninguno.
+const emptyData = () => ({ tasks: [], routines: [], festivos: [], birthdays: [], deleted: {} });
+let data = emptyData();
+
+function loadData() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch { return; }
+  if (!raw) return;
+  try { data = normalize(JSON.parse(raw)); }
+  catch {
+    // No se pisa lo guardado: se aparta para poder recuperarlo
+    try { localStorage.setItem(`${STORE_KEY}.dañado.${Date.now()}`, raw); } catch {}
+    alert('Los datos guardados estaban dañados y no se han podido leer. Se ha guardado una copia aparte en el navegador. Si tienes una copia exportada, impórtala desde la vista Lista.');
+  }
+}
+function writeLocal() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch { alert('No se han podido guardar los cambios en este navegador. Usa «Exportar copia» en la vista Lista para no perderlos.'); }
+}
+// Guarda en este dispositivo y, si está conectado, sube los cambios a Drive al momento
+function saveData() {
+  writeLocal();
+  syncSoon();
+}
+
+// Todo lo que entra (de este navegador o de una copia importada) pasa por aquí: solo se aceptan
+// elementos con los campos y formatos esperados, para que nada extraño acabe dentro de la página.
+const RE_ID = /^[a-z0-9]{1,40}$/i, RE_COLOR = /^#[0-9a-f]{6}$/i, RE_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const realDate = s => typeof s === 'string' && isDateStr(s) && key(fromKey(s)) === s;
+const str = (s, max) => typeof s === 'string' ? s.slice(0, max) : '';
+const int = (n, lo, hi) => Number.isInteger(n) && n >= lo && n <= hi;
+
+function cleanItem(type, x) {
+  if (!x || typeof x !== 'object' || typeof x.id !== 'string' || !RE_ID.test(x.id)) return null;
+  if (typeof x.title !== 'string' || !x.title.trim()) return null;
+  const base = {
+    id: x.id, title: str(x.title, 80), color: RE_COLOR.test(x.color) ? x.color : COLOR_DEFECTO[type],
+    updated: int(x.updated, 0, 1e15) ? x.updated : 0,
+  };
+  if (type === 'task') {
+    if (!realDate(x.date) || !RE_TIME.test(x.time) || !int(x.dur, 1, TAREA_MAX_MIN)) return null;
+    return { ...base, desc: str(x.desc, 1000), date: x.date, time: x.time, dur: x.dur, done: x.done === true };
+  }
+  if (type === 'routine') {
+    const days = Array.isArray(x.days) ? [...new Set(x.days.filter(d => int(d, 0, 6)))] : [];
+    if (!RE_TIME.test(x.time) || !int(x.dur, 1, 1440) || !days.length || !realDate(x.from)) return null;
+    if (x.until && (!realDate(x.until) || x.until < x.from)) return null;
+    return { ...base, desc: str(x.desc, 1000), time: x.time, dur: x.dur, days, from: x.from, until: x.until || '', skipHolidays: x.skipHolidays === true };
+  }
+  if (type === 'festivo') {
+    if (!realDate(x.date) || (x.endDate && (!realDate(x.endDate) || x.endDate < x.date))) return null;
+    return { ...base, desc: str(x.desc, 1000), date: x.date, endDate: x.endDate || x.date };
+  }
+  if (!int(x.month, 1, 12) || !int(x.day, 1, daysInMonth(2028, x.month - 1))) return null;
+  return { ...base, month: x.month, day: x.day };
+}
+
+// Devuelve los datos limpios y cuántos elementos se han descartado por no ser válidos
+function sanitize(d) {
+  const out = emptyData();
+  const seen = new Set();
+  let dropped = 0;
+  if (d && typeof d === 'object') {
+    for (const [type, coll] of Object.entries(COLLECTION)) {
+      for (const x of Array.isArray(d[coll]) ? d[coll] : []) {
+        const it = cleanItem(type, x);
+        if (it && !seen.has(it.id)) { seen.add(it.id); out[coll].push(it); } else dropped++;
+      }
+    }
+    if (d.deleted && typeof d.deleted === 'object' && !Array.isArray(d.deleted)) {
+      for (const [id, t] of Object.entries(d.deleted).slice(0, 50000)) if (RE_ID.test(id) && int(t, 0, 1e15)) out.deleted[id] = t;
+    }
+  }
+  return { data: out, dropped };
+}
+const normalize = d => sanitize(d).data;
+
+// Une dos versiones de los datos elemento a elemento: gana la modificación más reciente
+// y un borrado gana a cualquier versión anterior de ese elemento.
+const TOMBSTONE_DAYS = 365;
+function mergeData(a, b) {
+  const out = emptyData();
+  for (const src of [a.deleted, b.deleted]) {
+    for (const [id, t] of Object.entries(src)) if (!(out.deleted[id] >= t)) out.deleted[id] = t;
+  }
+  for (const coll of Object.values(COLLECTION)) {
+    const byId = new Map();
+    for (const it of [...a[coll], ...b[coll]]) {
+      const cur = byId.get(it.id);
+      // Si coinciden en fecha se elige siempre la misma versión, para que todos los dispositivos acaben igual
+      if (!cur || it.updated > cur.updated || (it.updated === cur.updated && JSON.stringify(it) > JSON.stringify(cur))) byId.set(it.id, it);
+    }
+    for (const it of byId.values()) if (!(out.deleted[it.id] >= it.updated)) out[coll].push(it);
+  }
+  const limit = Date.now() - TOMBSTONE_DAYS * DAY;
+  for (const [id, t] of Object.entries(out.deleted)) if (t < limit) delete out.deleted[id];
+  return out;
+}
+// Representación estable para saber si dos versiones son iguales
+const canon = d => JSON.stringify([
+  ...Object.values(COLLECTION).map(c => [...d[c]].sort((x, y) => (x.id < y.id ? -1 : 1)).map(x => JSON.stringify(x, Object.keys(x).sort()))),
+  Object.entries(d.deleted).sort(),
+]);
+const findItem = (type, id) => data[COLLECTION[type]].find(x => x.id === id);
+
+// Un festivo personal puede abarcar varios días seguidos (date → endDate, ambos incluidos)
+const festEnd = f => f.endDate || f.date;
+const festivosOf = dt => { const k = key(dt); return data.festivos.filter(f => f.date <= k && k <= festEnd(f)); };
+const festRange = f => festEnd(f) === f.date ? '' : `del ${shortDate(fromKey(f.date))} al ${shortDate(fromKey(festEnd(f)))}`;
+const isHoliday = dt => holidaysOf(dt).length > 0 || festivosOf(dt).length > 0;
+const absStart = (k, time) => fromKey(k).getTime() / 60000 + toMin(time);
+
+function birthdaysOf(dt) {
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1, d = dt.getUTCDate();
+  const leap = daysInMonth(y, 1) === 29;
+  return data.birthdays.filter(b => b.month === m && (b.day === d || (!leap && m === 2 && b.day === 29 && d === 28)));
+}
+const bdLabel = b => `${b.day} de ${MESES[b.month - 1]}`;
+
+function routineMatches(r, dt) {
+  const k = key(dt);
+  return k >= r.from && (!r.until || k <= r.until) && r.days.includes(dow(dt));
+}
+const routineOn = (r, dt) => routineMatches(r, dt) && !(r.skipHolidays && isHoliday(dt));
+const routinesCancelled = dt => data.routines.filter(r => r.skipHolidays && routineMatches(r, dt) && isHoliday(dt));
+
+// Trozos de tareas y rutinas que caen en un día (minutos 0–1440 dentro del día)
+function segmentsFor(dt) {
+  const d0 = dt.getTime() / 60000, d1 = d0 + 1440, out = [];
+  const add = (kind, item, s, e) => {
+    if (e > d0 && s < d1) out.push({ kind, item, s: Math.max(s, d0) - d0, e: Math.min(e, d1) - d0, contStart: s < d0, contEnd: e > d1, absS: s, absE: e });
+  };
+  for (const t of data.tasks) { const s = absStart(t.date, t.time); add('task', t, s, s + t.dur); }
+  // Una rutina del día anterior puede pasar de medianoche
+  for (const day of [addDays(dt, -1), dt]) {
+    for (const r of data.routines) if (routineOn(r, day)) { const s = absStart(key(day), r.time); add('routine', r, s, s + r.dur); }
+  }
+  return out.sort((a, b) => a.s - b.s || b.e - a.e);
+}
+
+// Reparte los bloques que se solapan en carriles
+function layout(segs) {
+  let cluster = [], end = -1;
+  const flush = () => {
+    const lanes = [];
+    for (const g of cluster) {
+      let i = lanes.findIndex(e => e <= g.s);
+      if (i < 0) { i = lanes.length; lanes.push(0); }
+      lanes[i] = g.e;
+      g.lane = i;
+    }
+    for (const g of cluster) g.lanes = lanes.length;
+    cluster = [];
+  };
+  for (const g of segs) {
+    if (cluster.length && g.s >= end) { flush(); end = -1; }
+    cluster.push(g);
+    end = Math.max(end, g.e);
+  }
+  if (cluster.length) flush();
+  return segs;
+}
+
+function rangeLabel(g) {
+  if (g.absE - g.absS >= 1440) {
+    const endDay = absToDate(g.absE);
+    return `${shortDate(absToDate(g.absS))} ${hm(g.absS)} → ${shortDate(endDay)} ${hm(g.absE)}`;
+  }
+  return `${hm(g.absS)}–${hm(g.absE)}`;
+}
+
+function evHTML(g, pos) {
+  const top = pos(g.s), h = Math.max(pos(g.e) - top, 0.42);
+  const st = `top:calc(var(--row) * ${top});height:calc(var(--row) * ${h} - 2px);left:calc(${g.lane / g.lanes * 100}% + 2px);width:calc(${100 / g.lanes}% - 4px);`;
+  const it = g.item;
+  const tip = esc(`${it.title} (${rangeLabel(g)})${it.desc ? '\n' + it.desc : ''}`);
+  if (g.kind === 'task') {
+    return `<div class="ev task${it.done ? ' done' : ''}" style="${st}background:${it.color}38;border-left-color:${it.color}" data-edit="task|${it.id}" title="${tip}">
+      <input type="checkbox" data-toggle="${it.id}" ${it.done ? 'checked' : ''} style="accent-color:${it.color}" aria-label="Marcar como hecha"><b>${esc(it.title)}</b><span>${rangeLabel(g)}</span></div>`;
+  }
+  return `<div class="ev" style="${st}background:${it.color};color:${textOn(it.color)}" data-edit="routine|${it.id}" title="${tip}">
+    <b>${esc(it.title)}</b><span>${rangeLabel(g)}</span></div>`;
+}
+
+function textOn(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [n >> 16 & 255, n >> 8 & 255, n & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#1d1c1a' : '#ffffff';
+}
+
+// Las tareas que ocupan el día entero van arriba como etiqueta en vez de como bloque
+const isAllDay = g => g.s === 0 && g.e === 1440;
+const allDayChip = g => `<span class="chip tchip${g.item.done ? ' done' : ''}" style="${softStyle(g.item.color)}" data-edit="task|${g.item.id}" title="${esc(g.item.title + ' (' + rangeLabel(g) + ')')}">↔ ${esc(g.item.title)}</span>`;
+const festChip = f => `<span class="chip fchip" style="${softStyle(f.color)}" data-edit="festivo|${f.id}" title="${esc(f.title + ' (festivo personal)' + (f.desc ? '\n' + f.desc : ''))}">${esc(f.title)}</span>`;
+const bdChip = b => `<span class="chip" style="${softStyle(b.color)}" data-edit="birthday|${b.id}" title="${esc('Cumpleaños de ' + b.title)}">🎂 ${esc(b.title)}</span>`;
+
+/* ---------- Estado ---------- */
+const VIEWS = ['year', 'month', 'week', 'day', 'list'];
+// En el móvil la vista Año es muy larga: la primera vez se abre en Mes
+let state = { view: matchMedia('(max-width:700px)').matches ? 'month' : 'year', cursor: clampDate(madridNow().date) };
+try {
+  const saved = JSON.parse(localStorage.getItem(`${CLAVE_DATOS}.vista`) || 'null');
+  if (VIEWS.includes(saved)) state.view = saved;
+} catch {}
+loadData();
+
+const main = document.getElementById('main');
+const titleEl = document.getElementById('title');
+
+// Clase y estilo de festivo de un día (oficial o personal)
+function holidayLook(dt) {
+  const hs = holidaysOf(dt);
+  if (hs.length) return { cls: 'h-' + mainScope(hs), style: '' };
+  const f = festivosOf(dt)[0];
+  if (f) return { cls: 'h-mine', style: softStyle(f.color) };
+  return { cls: '', style: '' };
+}
+
+function dayTitle(dt) {
+  const parts = [cap(longDate(dt))];
+  for (const h of holidaysOf(dt)) parts.push(`${h.name} (festivo ${TIPO[h.scope].toLowerCase()})`);
+  for (const f of festivosOf(dt)) parts.push(`${f.title} (festivo personal)`);
+  for (const b of birthdaysOf(dt)) parts.push(`Cumpleaños de ${b.title}`);
+  const z = dayZone(dt);
+  if (z === 'spring') parts.push('Cambio de hora: 02:00 → 03:00');
+  if (z === 'fall') parts.push('Cambio de hora: 03:00 → 02:00');
+  const n = segmentsFor(dt).filter(g => g.kind === 'task' && !g.item.done).length;
+  if (n) parts.push(`${n} tarea${n > 1 ? 's' : ''} pendiente${n > 1 ? 's' : ''}`);
+  return esc(parts.join('\n'));
+}
+
+function dstChip(dt) {
+  const z = dayZone(dt);
+  if (z === 'spring') return '<span class="chip dst">Cambio de hora +1 h</span>';
+  if (z === 'fall') return '<span class="chip dst">Cambio de hora −1 h</span>';
+  return '';
+}
+
+function holidayChips(dt) {
+  return holidaysOf(dt).map(h => `<span class="chip ${h.scope}" title="${esc(h.name)}">${esc(h.name)}</span>`).join('')
+    + festivosOf(dt).map(festChip).join('')
+    + birthdaysOf(dt).map(bdChip).join('');
+}
+
+const legend = () => `
+  <div class="legend">
+    <span><i class="sw" style="background:var(--nac-soft);border:1px solid var(--nac)"></i>Festivo nacional</span>
+    <span><i class="sw" style="background:var(--cat-soft);border:1px solid var(--cat)"></i>Festivo en Cataluña</span>
+    ${FESTIVOS_EXTRA.length ? '<span><i class="sw" style="background:var(--local-soft);border:1px solid var(--local)"></i>Festivo local</span>' : ''}
+    <span><i class="sw" style="background:#d6409f2e;border:1px solid #d6409f"></i>Festivo personal (con su color)</span>
+    <span><i class="sw" style="box-shadow:inset 0 0 0 2px #f76b15"></i>Cumpleaños</span>
+    <span><i class="sw" style="border:2px solid var(--accent)"></i>Hoy</span>
+    <span><i class="sw" style="background:var(--accent);border-radius:50%;width:6px;height:6px"></i>Tareas pendientes</span>
+    <span><i class="sw" style="background:var(--dst);border-radius:50%;width:8px;height:8px"></i>Cambio de hora</span>
+  </div>`;
+
+/* ---------- Vista año ---------- */
+function renderYear(now) {
+  const y = state.cursor.getUTCFullYear();
+  const info = yearInfo(y);
+  titleEl.textContent = String(y);
+
+  let months = '';
+  for (let m = 0; m < 12; m++) {
+    const first = D(y, m, 1);
+    let cells = DIAS_INI.map(d => `<div class="wd">${d}</div>`).join('');
+    cells += '<span></span>'.repeat(dow(first));
+    for (let d = 1; d <= daysInMonth(y, m); d++) {
+      const dt = D(y, m, d);
+      const look = holidayLook(dt), c = [look.cls];
+      let style = look.style;
+      if (!look.cls && dow(dt) >= 5) c.push('we');
+      if (same(dt, now.date)) c.push('is-today');
+      const z = dayZone(dt);
+      if (z === 'spring' || z === 'fall') c.push('dst');
+      if (segmentsFor(dt).some(g => g.kind === 'task' && !g.item.done)) c.push('has-task');
+      const bd = birthdaysOf(dt)[0];
+      if (bd) { c.push('bday'); style += `;--bd:${bd.color}`; }
+      cells += `<button class="${c.join(' ')}" style="${style}" data-go="day|${key(dt)}" title="${dayTitle(dt)}">${d}</button>`;
+    }
+    months += `<section class="mini"><h3><button data-go="month|${key(first)}">${cap(MESES[m])}</button></h3><div class="mini-grid">${cells}</div></section>`;
+  }
+
+  const mine = data.festivos.filter(f => f.date <= `${y}-12-31` && festEnd(f) >= `${y}-01-01`)
+    .map(f => ({ date: fromKey(f.date < `${y}-01-01` ? `${y}-01-01` : f.date), name: f.title, mine: f }));
+  const all = [...info.holidays, ...mine].sort((a, b) => a.date - b.date);
+  const hl = all.map(h => `
+    <li><span class="when">${shortDate(h.date)}<br><span class="sub">${DIAS[dow(h.date)]}</span></span>
+    <button data-go="day|${key(h.date)}">${esc(h.name)}${h.mine
+      ? `<span class="tag" style="${softStyle(h.mine.color)}">Personal</span>`
+      : `<span class="tag ${h.scope}">${TIPO[h.scope]}</span>`}${h.mine && festRange(h.mine) ? `<br><span class="sub">${festRange(h.mine)}</span>` : ''}${dow(h.date) === 6 ? '<br><span class="sub">Cae en domingo</span>' : ''}</button></li>`).join('');
+
+  const bds = data.birthdays.map(b => {
+    const leap = daysInMonth(y, 1) === 29;
+    const date = D(y, b.month - 1, !leap && b.month === 2 && b.day === 29 ? 28 : b.day);
+    return { b, date };
+  }).sort((a, b) => a.date - b.date);
+  const bl = bds.map(({ b, date }) => `
+    <li><span class="when">${shortDate(date)}<br><span class="sub">${DIAS[dow(date)]}</span></span>
+    <button data-go="day|${key(date)}">🎂 ${esc(b.title)}</button></li>`).join('');
+
+  let workdays = 0;
+  for (let dt = D(y, 0, 1); dt.getUTCFullYear() === y; dt = addDays(dt, 1)) if (dow(dt) < 5 && !isHoliday(dt)) workdays++;
+  const total = (D(y + 1, 0, 1) - D(y, 0, 1)) / DAY;
+  const pending = data.tasks.filter(t => !t.done && t.date.startsWith(y + '-')).length;
+
+  main.innerHTML = `${legend()}
+  <div class="year-wrap">
+    <div class="year">${months}</div>
+    <aside class="side">
+      <h2>Festivos ${y} · Cataluña</h2>
+      <ul class="hlist">${hl}</ul>
+      ${bl ? `<h2>Cumpleaños</h2><ul class="hlist">${bl}</ul>` : ''}
+      <h2>Cambios de hora</h2>
+      <ul class="hlist">
+        <li><span class="when">${shortDate(info.spring)}<br><span class="sub">domingo</span></span>
+          <button data-go="day|${key(info.spring)}">02:00 → 03:00<span class="tag dst">+1 h</span><br><span class="sub">Empieza el horario de verano (CEST, UTC+2)</span></button></li>
+        <li><span class="when">${shortDate(info.fall)}<br><span class="sub">domingo</span></span>
+          <button data-go="day|${key(info.fall)}">03:00 → 02:00<span class="tag dst">−1 h</span><br><span class="sub">Vuelve el horario de invierno (CET, UTC+1)</span></button></li>
+      </ul>
+      <h2>Resumen</h2>
+      <ul class="facts">
+        <li><span>Días del año</span><span>${total}</span></li>
+        <li><span>Festivos oficiales</span><span>${info.holidays.length}</span></li>
+        <li><span>Festivos personales</span><span>${mine.length}</span></li>
+        <li><span>Laborables (L–V sin festivos)</span><span>${workdays}</span></li>
+        <li><span>Tareas pendientes</span><span>${pending}</span></li>
+      </ul>
+      <p class="note">Festivos calculados según el calendario laboral habitual de Cataluña. Los 2 festivos locales de cada municipio no se incluyen: puedes añadirlos en <code>FESTIVOS_EXTRA</code> al principio del código.</p>
+    </aside>
+  </div>`;
+}
+
+/* ---------- Vista mes ---------- */
+function renderMonth(now) {
+  const y = state.cursor.getUTCFullYear(), m = state.cursor.getUTCMonth();
+  titleEl.textContent = `${cap(MESES[m])} ${y}`;
+  const first = D(y, m, 1);
+  const start = addDays(first, -dow(first));
+  const weeks = Math.ceil((dow(first) + daysInMonth(y, m)) / 7);
+
+  let html = '<div class="wd wk0"></div>' + DIAS.map((d, i) => `<div class="wd"><span class="wl">${d}</span><span class="ws">${DIAS_INI[i]}</span></div>`).join('');
+  for (let w = 0; w < weeks; w++) {
+    const monday = addDays(start, w * 7);
+    html += `<button class="wk" data-go="week|${key(monday)}" title="Ver semana">${isoWeek(monday)}</button>`;
+    for (let i = 0; i < 7; i++) {
+      const dt = addDays(monday, i);
+      const look = holidayLook(dt);
+      const c = ['mcell', look.cls];
+      if (dt.getUTCMonth() !== m) c.push('out');
+      if (i >= 5) c.push('weekend');
+      if (same(dt, now.date)) c.push('is-today');
+      const segs = segmentsFor(dt);
+      const shown = segs.slice(0, 3).map(g => {
+        const dot = g.item.color;
+        return `<span class="echip${g.kind === 'task' && g.item.done ? ' done' : ''}" data-edit="${g.kind}|${g.item.id}" title="${esc(g.item.title + ' (' + rangeLabel(g) + ')')}"><i style="background:${dot}"></i>${g.contStart ? '↳ ' : hm(g.absS) + ' '}${esc(g.item.title)}</span>`;
+      }).join('');
+      const more = segs.length > 3 ? `<span class="more">+${segs.length - 3} más</span>` : '';
+      // En pantallas estrechas las etiquetas no caben: se ve un punto de color por elemento
+      const dots = [...birthdaysOf(dt).map(b => b.color), ...segs.filter(g => !(g.kind === 'task' && g.item.done)).map(g => g.item.color)]
+        .slice(0, 5).map(col => `<i style="background:${col}"></i>`).join('');
+      html += `<div class="${c.join(' ')}" style="${look.style}" role="button" tabindex="0" data-go="day|${key(dt)}" title="${dayTitle(dt)}"><span class="num">${dt.getUTCDate()}</span>${dots ? `<span class="mdots">${dots}</span>` : ''}${holidayChips(dt)}${dstChip(dt)}${shown}${more}</div>`;
+    }
+  }
+  main.innerHTML = `${legend()}<div class="month">${html}</div>
+    <p class="note">Consejo: mantén pulsado el clic (o el dedo, en el móvil) y arrastra sobre varios días para crear un festivo personal que los abarque.</p>`;
+}
+
+// Clase y estilo de la columna de horas de un día (festivo oficial, personal o fin de semana)
+function colLook(dt) {
+  const hs = holidaysOf(dt), fs = festivosOf(dt);
+  if (hs.length) return { cls: 'hol ' + mainScope(hs), style: '' };
+  if (fs.length) return { cls: '', style: `background:${colTint(fs[0].color)};` };
+  if (dow(dt) >= 5) return { cls: 'weekend', style: '' };
+  return { cls: '', style: '' };
+}
+
+/* ---------- Vista semana ---------- */
+function renderWeek(now) {
+  const monday = addDays(state.cursor, -dow(state.cursor));
+  const sunday = addDays(monday, 6);
+  const sameMonth = monday.getUTCMonth() === sunday.getUTCMonth();
+  titleEl.textContent = (sameMonth
+    ? `${monday.getUTCDate()} – ${sunday.getUTCDate()} ${MESES[sunday.getUTCMonth()]}`
+    : `${shortDate(monday)} – ${shortDate(sunday)}`) + ` ${sunday.getUTCFullYear()} · Semana ${isoWeek(monday)}`;
+
+  let head = `<div class="tg-head corner">Hora peninsular</div>`;
+  let cols = '';
+  for (let i = 0; i < 7; i++) {
+    const dt = addDays(monday, i);
+    const z = dayZone(dt);
+    const isToday = same(dt, now.date);
+    const segs = segmentsFor(dt);
+    head += `<div class="tg-head${isToday ? ' is-today' : ''}" role="button" tabindex="0" data-go="day|${key(dt)}" title="${dayTitle(dt)}">
+      <span class="d">${DIAS[i].slice(0, 3)}</span> <span class="n">${dt.getUTCDate()}</span>${holidayChips(dt)}${dstChip(dt)}${segs.filter(isAllDay).map(allDayChip).join('')}</div>`;
+    let slots = '';
+    for (let h = 0; h < 24; h++) {
+      const c = ['slot'];
+      let note = '';
+      if (h < 7 || h >= 22) c.push('night');
+      if (z === 'spring' && h === 2) { c.push('missing'); note = 'No existe (02:00 → 03:00)'; }
+      if (z === 'fall' && h === 2) { c.push('repeat'); note = 'Esta hora ocurre 2 veces'; }
+      slots += `<div class="${c.join(' ')}" data-slot="${key(dt)}|${h * 60}">${note ? `<span class="slot-note">${note}</span>` : ''}</div>`;
+    }
+    const evs = layout(segs.filter(g => !isAllDay(g))).map(g => evHTML(g, m => m / 60)).join('');
+    const line = isToday ? `<div class="nowline" style="top:calc(var(--row) * ${now.h + now.mi / 60})"></div>` : '';
+    const look = colLook(dt);
+    cols += `<div class="col ${look.cls}" style="grid-row:2;${look.style}" data-date="${key(dt)}">${slots}${evs}${line}</div>`;
+  }
+  let times = '';
+  for (let h = 0; h < 24; h++) times += `<div class="tlabel">${pad(h)}:00</div>`;
+
+  main.innerHTML = `${legend()}<div class="timegrid week"><div class="tg">${head}<div class="times" style="grid-row:2">${times}</div>${cols}</div></div>`;
+}
+
+/* ---------- Vista día ---------- */
+// Convierte una hora de reloj (minutos) en la fila de la vista día, teniendo en cuenta el cambio de hora
+function dayRowPos(dt) {
+  const z = dayZone(dt);
+  return m => {
+    const h = m / 60;
+    if (z === 'spring') return h >= 3 ? h - 1 : Math.min(h, 2);
+    if (z === 'fall') return h >= 3 ? h + 1 : h;
+    return h;
+  };
+}
+// Lo contrario: de una fila de la vista día a minutos de reloj
+function dayRowToMin(dt) {
+  const z = dayZone(dt);
+  return r => {
+    if (z === 'spring') return r < 2 ? r * 60 : (r + 1) * 60;
+    if (z === 'fall') return r < 3 ? r * 60 : (r - 1) * 60;
+    return r * 60;
+  };
+}
+
+function renderDay(now) {
+  const dt = state.cursor;
+  titleEl.textContent = cap(longDate(dt));
+  const hs = holidaysOf(dt), fs = festivosOf(dt), z = dayZone(dt), slots = hourSlots(dt);
+  const isToday = same(dt, now.date);
+  const curIdx = isToday ? slots.findIndex(s => s.h === now.h && s.zone === now.zone) : -1;
+  const segs = segmentsFor(dt);
+  const cancelled = routinesCancelled(dt);
+
+  let banners = hs.map(h => `<div class="banner ${h.scope}"><b>${esc(h.name)}</b> · festivo ${TIPO[h.scope].toLowerCase()}</div>`).join('');
+  banners += fs.map(f => `<div class="banner" style="${softStyle(f.color)}" data-edit="festivo|${f.id}" title="Editar festivo">
+    <b>${esc(f.title)}</b> · festivo personal (${festRange(f) || 'todo el día'})${f.desc ? `<p>${esc(f.desc)}</p>` : ''}</div>`).join('');
+  banners += birthdaysOf(dt).map(b => `<div class="banner" style="${softStyle(b.color)}" data-edit="birthday|${b.id}" title="Editar cumpleaños">
+    🎂 <b>Cumpleaños de ${esc(b.title)}</b></div>`).join('');
+  if (z === 'spring') banners += `<div class="banner dst"><b>Cambio al horario de verano.</b> A las 02:00 los relojes se adelantan a las 03:00. Este día tiene 23 horas.</div>`;
+  if (z === 'fall') banners += `<div class="banner dst"><b>Cambio al horario de invierno.</b> A las 03:00 los relojes se atrasan a las 02:00. Este día tiene 25 horas.</div>`;
+  banners += segs.filter(isAllDay).map(g => `<div class="banner" style="${softStyle(g.item.color)}" data-edit="task|${g.item.id}" title="Editar tarea">
+    <b${g.item.done ? ' style="text-decoration:line-through"' : ''}>↔ ${esc(g.item.title)}</b> · tarea que ocupa todo el día (${rangeLabel(g)})</div>`).join('');
+
+  let times = '', rows = '';
+  slots.forEach((s, i) => {
+    const cur = i === curIdx ? ' cur' : '';
+    times += `<div class="tlabel${cur}"><b>${pad(s.h)}:00</b>${s.zone} · ${OFFSET[s.zone]}</div>`;
+    const c = ['slot'];
+    if (s.h < 7 || s.h >= 22) c.push('night');
+    if (s.repeat) c.push('repeat');
+    rows += `<div class="${c.join(' ')}${cur}" data-slot="${key(dt)}|${s.h * 60}">${s.note ? `<span class="slot-note">${s.note}</span>` : ''}</div>`;
+  });
+  const evs = layout(segs.filter(g => !isAllDay(g))).map(g => evHTML(g, dayRowPos(dt))).join('');
+  const line = curIdx >= 0 ? `<div class="nowline" style="top:calc(var(--row) * ${curIdx + now.mi / 60})"></div>` : '';
+  const look = colLook(dt);
+
+  const y = dt.getUTCFullYear();
+  const doy = (dt - D(y, 0, 1)) / DAY + 1;
+  const total = (D(y + 1, 0, 1) - D(y, 0, 1)) / DAY;
+  const zoneTxt = z === 'spring' ? 'CET → CEST' : z === 'fall' ? 'CEST → CET' : `${z} (${OFFSET[z]})`;
+
+  const tasks = segs.filter(g => g.kind === 'task');
+  const routines = segs.filter(g => g.kind === 'routine');
+  const taskList = tasks.length ? tasks.map(g => taskItem(g.item, rangeLabel(g))).join('') : '<li class="empty">Sin tareas</li>';
+  const routineList = routines.map(g => routineItem(g.item, rangeLabel(g))).join('')
+    + cancelled.map(r => `<li><span class="dot" style="background:${r.color};opacity:.4"></span><div class="grow"><b class="cancel">${esc(r.title)}</b><span class="sub">Cancelada por festivo</span></div></li>`).join('')
+    || '<li class="empty">Sin rutinas</li>';
+  const nextHour = isToday ? Math.min(now.h + 1, 23) : 9;
+
+  main.innerHTML = `<div class="day-wrap">
+    <div>${banners}
+      <div class="timegrid day"><div class="tg"><div class="times">${times}</div><div class="col ${look.cls}" style="${look.style}" data-date="${key(dt)}">${rows}${evs}${line}</div></div></div>
+    </div>
+    <aside class="side">
+      <button class="btn primary" style="width:100%;margin-bottom:12px" data-new="${key(dt)}|${pad(nextHour)}:00">+ Añadir a este día</button>
+      <h2>Tareas</h2>
+      <ul class="items">${taskList}</ul>
+      <h2>Rutinas</h2>
+      <ul class="items">${routineList}</ul>
+      <h2>Información del día</h2>
+      <ul class="facts">
+        <li><span>Día del año</span><span>${doy} de ${total}</span></li>
+        <li><span>Quedan</span><span>${total - doy} días</span></li>
+        <li><span>Semana</span><span>${isoWeek(dt)}</span></li>
+        <li><span>Horario</span><span>${zoneTxt}</span></li>
+        <li><span>Horas del día</span><span>${slots.length}</span></li>
+        <li><span>Tipo de día</span><span>${isHoliday(dt) ? 'Festivo' : dow(dt) >= 5 ? 'Fin de semana' : 'Laborable'}</span></li>
+      </ul>
+      <p class="note">Consejo: en esta vista y en la de semana puedes mantener pulsado el clic y arrastrar sobre las horas para crear una tarea o rutina en ese tramo.</p>
+    </aside>
+  </div>`;
+}
+
+/* ---------- Vista lista ---------- */
+function daysLabel(days) {
+  const s = [...days].sort().join(',');
+  if (s === '0,1,2,3,4,5,6') return 'Todos los días';
+  if (s === '0,1,2,3,4') return 'De lunes a viernes';
+  if (s === '5,6') return 'Fines de semana';
+  return [...days].sort().map(d => DIAS[d].slice(0, 3)).join(', ');
+}
+
+function taskItem(t, when) {
+  if (!when) {
+    const s = absStart(t.date, t.time), e = s + t.dur;
+    const sd = absToDate(s), ed = absToDate(e);
+    when = `${cap(DIAS[dow(sd)].slice(0, 3))} ${shortDate(sd)} ${sd.getUTCFullYear()} · ${hm(s)}–${same(sd, ed) ? '' : shortDate(ed) + ' '}${hm(e)}`;
+  }
+  return `<li class="${t.done ? 'done' : ''}"><input type="checkbox" data-toggle="${t.id}" ${t.done ? 'checked' : ''} style="accent-color:${t.color}" aria-label="Marcar como hecha">
+    <div class="grow"><b>${esc(t.title)}</b><span class="sub">${when}</span>${t.desc ? `<p>${esc(t.desc)}</p>` : ''}</div>
+    <button class="btn sm" data-edit="task|${t.id}">Editar</button></li>`;
+}
+
+function routineItem(r, when) {
+  const range = r.until ? `del ${shortDate(fromKey(r.from))} ${r.from.slice(0, 4)} al ${shortDate(fromKey(r.until))} ${r.until.slice(0, 4)}` : `desde ${shortDate(fromKey(r.from))} ${r.from.slice(0, 4)}`;
+  when = when || `${daysLabel(r.days)} · ${r.time}–${hm(toMin(r.time) + r.dur)} · ${range}${r.skipHolidays ? ' · no cuenta en festivos' : ''}`;
+  return `<li><span class="dot" style="background:${r.color}"></span>
+    <div class="grow"><b>${esc(r.title)}</b><span class="sub">${when}</span>${r.desc ? `<p>${esc(r.desc)}</p>` : ''}</div>
+    <button class="btn sm" data-edit="routine|${r.id}">Editar</button></li>`;
+}
+
+function festivoItem(f) {
+  const d = fromKey(f.date);
+  return `<li><span class="dot" style="background:${f.color}"></span>
+    <div class="grow"><b>${esc(f.title)}</b><span class="sub">${festRange(f) ? `${cap(festRange(f))} de ${d.getUTCFullYear()}` : cap(longDate(d))}</span>${f.desc ? `<p>${esc(f.desc)}</p>` : ''}</div>
+    <button class="btn sm" data-edit="festivo|${f.id}">Editar</button></li>`;
+}
+
+function birthdayItem(b) {
+  return `<li><span class="dot" style="background:${b.color}"></span>
+    <div class="grow"><b>🎂 ${esc(b.title)}</b><span class="sub">${bdLabel(b)} · cada año</span></div>
+    <button class="btn sm" data-edit="birthday|${b.id}">Editar</button></li>`;
+}
+
+function renderList() {
+  titleEl.textContent = 'Tareas, rutinas, festivos y cumpleaños';
+  const byWhen = (a, b) => (a.date + a.time).localeCompare(b.date + b.time);
+  const pending = data.tasks.filter(t => !t.done).sort(byWhen);
+  const done = data.tasks.filter(t => t.done).sort(byWhen);
+  const empty = txt => `<li class="empty">${txt}</li>`;
+  const bds = [...data.birthdays].sort((a, b) => a.month - b.month || a.day - b.day);
+
+  main.innerHTML = `
+  <div class="toolbar">
+    <button class="btn primary" data-new="||task">+ Tarea</button>
+    <button class="btn primary" data-new="||routine">+ Rutina</button>
+    <button class="btn primary" data-new="||festivo">+ Festivo</button>
+    <button class="btn primary" data-new="||birthday">+ Cumpleaños</button>
+    <span class="spacer"></span>
+    <button class="btn" id="exportBtn">Exportar copia</button>
+    <button class="btn" id="importBtn">Importar copia</button>
+  </div>
+  <div class="list-wrap">
+    <section class="side">
+      <h2>Tareas pendientes (${pending.length})</h2>
+      <ul class="items">${pending.map(t => taskItem(t)).join('') || empty('No hay tareas pendientes')}</ul>
+      <h2>Tareas hechas (${done.length})</h2>
+      <ul class="items">${done.map(t => taskItem(t)).join('') || empty('Todavía ninguna')}</ul>
+    </section>
+    <section class="side">
+      <h2>Rutinas (${data.routines.length})</h2>
+      <ul class="items">${data.routines.map(r => routineItem(r)).join('') || empty('No hay rutinas')}</ul>
+    </section>
+    <section class="side">
+      <h2>Festivos personales (${data.festivos.length})</h2>
+      <ul class="items">${[...data.festivos].sort((a, b) => a.date.localeCompare(b.date)).map(festivoItem).join('') || empty('No hay festivos personales')}</ul>
+      <h2>Cumpleaños (${bds.length})</h2>
+      <ul class="items">${bds.map(birthdayItem).join('') || empty('No hay cumpleaños')}</ul>
+    </section>
+  </div>
+  <p class="note">Los datos se guardan en este dispositivo y, si conectas Google Drive (botón de la nube), también en tu Drive. Usa «Exportar copia» de vez en cuando para tener además una copia en un archivo.</p>`;
+
+  document.getElementById('exportBtn').onclick = exportData;
+  document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+}
+
+/* ---------- Render y navegación ---------- */
+const renderers = { year: renderYear, month: renderMonth, week: renderWeek, day: renderDay, list: renderList };
+const rowPx = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row')) || 48;
+
+function periodBounds(view, dt) {
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth();
+  if (view === 'year') return [D(y, 0, 1), D(y, 11, 31)];
+  if (view === 'month') return [D(y, m, 1), D(y, m + 1, 0)];
+  if (view === 'week') { const mo = addDays(dt, -dow(dt)); return [mo, addDays(mo, 6)]; }
+  return [dt, dt];
+}
+function stepDate(dir) {
+  const c = state.cursor;
+  if (state.view === 'year') return addMonths(c, 12 * dir);
+  if (state.view === 'month') return addMonths(c, dir);
+  if (state.view === 'week') return addDays(c, 7 * dir);
+  return addDays(c, dir);
+}
+function canStep(dir) {
+  if (state.view === 'list') return false;
+  const [a, b] = periodBounds(state.view, stepDate(dir));
+  return b >= MIN_DATE && a <= MAX_DATE;
+}
+
+function render({ keepScroll = false } = {}) {
+  const now = madridNow();
+  const sc = main.querySelector('.timegrid');
+  const prevScroll = keepScroll && sc ? sc.scrollTop : null;
+  const prevMain = keepScroll ? main.scrollTop : 0;
+  renderers[state.view](now);
+  document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === state.view));
+  document.getElementById('prev').disabled = !canStep(-1);
+  document.getElementById('next').disabled = !canStep(1);
+  main.scrollTop = prevMain;
+  const grid = main.querySelector('.timegrid');
+  if (grid) {
+    // Por defecto se centra en la hora actual (si está a la vista) o en las 07:00
+    grid.scrollTop = prevScroll !== null ? prevScroll : rowPx() * (main.querySelector('.nowline') ? Math.max(now.h - 2, 0) : 7);
+  }
+  try { localStorage.setItem(`${CLAVE_DATOS}.vista`, JSON.stringify(state.view)); } catch {}
+}
+
+function step(dir) {
+  if (!canStep(dir)) return;
+  state.cursor = clampDate(stepDate(dir));
+  render();
+}
+const goToday = () => { state.cursor = clampDate(madridNow().date); if (state.view === 'list') state.view = 'day'; render(); };
+
+document.getElementById('prev').onclick = () => step(-1);
+document.getElementById('next').onclick = () => step(1);
+document.getElementById('today').onclick = goToday;
+document.getElementById('new').onclick = () => openForm('task', null);
+document.querySelectorAll('.views button').forEach(b => b.onclick = () => { state.view = b.dataset.view; render(); });
+
+function defaultPreset() {
+  const now = madridNow();
+  const viewingToday = same(state.cursor, now.date) || state.view === 'list';
+  const date = key(viewingToday ? clampDate(now.date) : state.cursor);
+  const h = viewingToday ? Math.min(now.h + 1, 23) : 9;
+  return { date, time: `${pad(h)}:00`, endTime: hm((h + 1) * 60), endDate: h === 23 ? key(addDays(fromKey(date), 1)) : date };
+}
+
+main.addEventListener('change', e => {
+  const t = e.target.closest('[data-toggle]');
+  if (!t) return;
+  const task = findItem('task', t.dataset.toggle);
+  if (task) { task.done = t.checked; task.updated = Date.now(); saveData(); render({ keepScroll: true }); }
+});
+
+main.addEventListener('click', e => {
+  if (e.target.closest('[data-toggle]') || suppressClick) return;
+  const ed = e.target.closest('[data-edit]');
+  if (ed) {
+    const [type, id] = ed.dataset.edit.split('|');
+    const item = findItem(type, id);
+    if (item) openForm(type, item);
+    return;
+  }
+  const slot = e.target.closest('[data-slot]');
+  if (slot) {
+    // Con ratón se gestiona al arrastrar; esto es para pantallas táctiles
+    if (e.pointerType === 'mouse') return;
+    const [date, min] = slot.dataset.slot.split('|');
+    openTimed(date, +min, Math.min(+min + 60, 1440));
+    return;
+  }
+  const nw = e.target.closest('[data-new]');
+  if (nw) {
+    const [date, time, type] = nw.dataset.new.split('|');
+    const p = {};
+    if (date) { p.date = date; p.endDate = date; }
+    if (time) { p.time = time; p.endTime = hm(toMin(time) + 60); if (toMin(time) >= 1380) p.endDate = key(addDays(fromKey(date), 1)); }
+    openForm(type || 'task', null, p);
+    return;
+  }
+  const go = e.target.closest('[data-go]');
+  if (go) {
+    const [view, k] = go.dataset.go.split('|');
+    state.view = view;
+    state.cursor = clampDate(fromKey(k));
+    render();
+  }
+});
+main.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.mcell, .tg-head[data-go]')) { e.preventDefault(); e.target.click(); }
+});
+
+// Deslizar el dedo a izquierda o derecha pasa al periodo siguiente o anterior.
+// En la semana no, porque ahí deslizar sirve para ver el resto de días.
+let swipe = null;
+main.addEventListener('touchstart', e => {
+  swipe = e.touches.length === 1 && !e.target.closest('.week') ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null;
+}, { passive: true });
+main.addEventListener('touchend', e => {
+  const s = swipe;
+  swipe = null;
+  if (!s || drag || mdrag || state.view === 'list') return;
+  const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
+  if (Date.now() - s.t < 600 && Math.abs(dx) > 70 && Math.abs(dy) < 50) step(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+// Altura real de la cabecera (cambia en el móvil al girar la pantalla)
+const headerEl = document.querySelector('header');
+const setHdr = () => document.documentElement.style.setProperty('--hdr', `${headerEl.offsetHeight}px`);
+new ResizeObserver(setHdr).observe(headerEl);
+setHdr();
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg.open || syncDlg.open || /input|textarea|select/i.test(e.target.tagName)) return;
+  const map = { a: 'year', m: 'month', s: 'week', d: 'day', l: 'list' };
+  const k = e.key.toLowerCase();
+  if (e.key === 'ArrowLeft') step(-1);
+  else if (e.key === 'ArrowRight') step(1);
+  else if (k === 't') goToday();
+  else if (k === 'n') { e.preventDefault(); openForm('task', null); }
+  else if (map[k]) { state.view = map[k]; render(); }
+});
+
+/* ---------- Seleccionar un tramo arrastrando (semana / día) ---------- */
+let drag = null, suppressClick = false;
+const label24 = m => m >= 1440 ? '24:00' : hm(m);
+
+function colMapping(col) {
+  const dt = fromKey(col.dataset.date);
+  return col.closest('.day') ? { pos: dayRowPos(dt), toMin: dayRowToMin(dt) } : { pos: m => m / 60, toMin: r => r * 60 };
+}
+
+// Un clic sin arrastrar elige la hora entera; arrastrando se ajusta a tramos de 15 min
+function selRange(d) {
+  if (!d.moved) { const s = Math.min(Math.floor(d.a / 60) * 60, 1380); return [s, s + 60]; }
+  const lo = Math.min(d.a, d.c), hi = Math.max(d.a, d.c);
+  let s = Math.floor(lo / 15) * 15, e = Math.ceil(hi / 15) * 15;
+  if (e - s < 15) e = s + 15;
+  if (e > 1440) { e = 1440; s = Math.min(s, 1425); }
+  return [s, e];
+}
+
+function paintSel() {
+  const [s, e] = selRange(drag);
+  const top = drag.map.pos(s), h = Math.max(drag.map.pos(e) - top, 0.25);
+  drag.sel.style.top = `calc(var(--row) * ${top})`;
+  drag.sel.style.height = `calc(var(--row) * ${h})`;
+  drag.sel.textContent = `${hm(s)}–${label24(e)}`;
+}
+
+const clearSel = () => {
+  main.querySelectorAll('.sel').forEach(x => x.remove());
+  main.querySelectorAll('.msel').forEach(x => x.classList.remove('msel'));
+};
+
+/* ---------- Seleccionar varios días arrastrando (mes) → festivo ---------- */
+let mdrag = null;
+// Si se suelta el ratón fuera de la ventana no llega el pointerup: se cancela la selección
+const cancelDrags = () => { if (drag || mdrag) { drag = mdrag = null; clearSel(); } };
+window.addEventListener('blur', cancelDrags);
+document.addEventListener('pointercancel', cancelDrags);
+const cellKey = c => c.dataset.go.split('|')[1];
+const cellAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('.mcell[data-go]'); };
+
+// Con ratón la selección empieza al pulsar. Con el dedo hay que mantener pulsado un momento,
+// para que deslizar siga sirviendo para desplazarse por la página.
+let press = null;
+const cancelPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
+function onPress(e, start) {
+  if (e.pointerType === 'mouse') { if (e.button === 0) { e.preventDefault(); start(e.clientX, e.clientY); } return; }
+  cancelPress();
+  const x = e.clientX, y = e.clientY;
+  press = { x, y, timer: setTimeout(() => { press = null; if (navigator.vibrate) navigator.vibrate(15); start(x, y); }, 450) };
+}
+document.addEventListener('pointermove', e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) cancelPress(); });
+document.addEventListener('pointerup', cancelPress);
+document.addEventListener('pointercancel', cancelPress);
+// Mientras se arrastra con el dedo, la página no se desplaza ni sale el menú de mantener pulsado
+document.addEventListener('touchmove', e => { if (drag || mdrag) e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => { if (drag || mdrag || press) e.preventDefault(); });
+
+function paintMonthSel() {
+  const [a, b] = [mdrag.a, mdrag.c].sort();
+  main.querySelectorAll('.mcell[data-go]').forEach(c => { const k = cellKey(c); c.classList.toggle('msel', k >= a && k <= b); });
+}
+
+main.addEventListener('pointerdown', e => {
+  const cell = e.target.closest('.mcell[data-go]');
+  if (!cell || e.target.closest('[data-edit]')) return;
+  const k = cellKey(cell), touch = e.pointerType !== 'mouse';
+  // Con el dedo, mantener pulsado ya cuenta como selección (aunque sea de un solo día)
+  onPress(e, () => { mdrag = { a: k, c: k, moved: touch }; if (touch) paintMonthSel(); });
+});
+
+document.addEventListener('pointermove', e => {
+  if (!mdrag) return;
+  const cell = cellAt(e.clientX, e.clientY);
+  if (!cell) return;
+  mdrag.c = cellKey(cell);
+  if (mdrag.c !== mdrag.a) mdrag.moved = true;
+  if (mdrag.moved) paintMonthSel();
+});
+
+document.addEventListener('pointerup', () => {
+  if (!mdrag) return;
+  const d = mdrag;
+  mdrag = null;
+  if (!d.moved) return; // un clic normal abre el día
+  let [a, b] = [d.a, d.c].sort();
+  if (a < MIN_KEY) a = MIN_KEY;
+  if (b > MAX_KEY) b = MAX_KEY;
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; openForm('festivo', null, { date: a, endDate: b, dayRange: true }); }, 0);
+});
+
+/* ---------- Seleccionar un tramo horario arrastrando (semana / día) ---------- */
+main.addEventListener('pointerdown', e => {
+  const slot = e.target.closest('.slot');
+  const col = slot && slot.closest('.col[data-date]');
+  if (col) onPress(e, (x, y) => startSlotDrag(col, y));
+});
+
+function startSlotDrag(col, y0) {
+  clearSel();
+  const map = colMapping(col), row = rowPx();
+  const minAt = y => {
+    const r = col.getBoundingClientRect();
+    const rr = Math.min(Math.max((y - r.top) / row, 0), r.height / row);
+    return Math.min(Math.max(map.toMin(rr), 0), 1440);
+  };
+  const sel = document.createElement('div');
+  sel.className = 'sel';
+  col.appendChild(sel);
+  drag = { col, map, minAt, sel, a: minAt(y0), c: minAt(y0), y0, moved: false };
+  paintSel();
+}
+
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (Math.abs(e.clientY - drag.y0) > 4) drag.moved = true;
+  // Desplaza solo si se llega al borde de la zona de horas (en la vista día del móvil se desplaza la página)
+  const grid = drag.col.closest('.timegrid');
+  const scroller = grid.scrollHeight > grid.clientHeight + 1 ? grid : main;
+  const r = scroller.getBoundingClientRect();
+  if (e.clientY > r.bottom - 30) scroller.scrollTop += 12;
+  else if (e.clientY < r.top + 80) scroller.scrollTop -= 12;
+  drag.c = drag.minAt(e.clientY);
+  paintSel();
+});
+
+document.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  const [s, e] = selRange(d);
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; openTimed(d.col.dataset.date, s, e); }, 0);
+});
+
+// Abre el formulario para crear una tarea o rutina en un tramo de un día
+function openTimed(date, s, e) {
+  openForm('task', null, {
+    date, time: hm(s), endTime: hm(e),
+    endDate: e >= 1440 ? key(addDays(fromKey(date), 1)) : date,
+    timedOnly: true,
+  });
+}
+
+/* =====================================================================
+   FORMULARIO
+   ===================================================================== */
+const dlg = document.getElementById('dlg');
+const form = document.getElementById('form');
+const F = form.elements;
+const errEl = document.getElementById('err');
+let editing = null;
+
+// Opciones que se generan una vez
+document.getElementById('days').innerHTML = DIAS_INI.map((d, i) => `<label title="${DIAS[i]}"><input type="checkbox" name="day" value="${i}">${d}</label>`).join('');
+document.getElementById('colors').insertAdjacentHTML('afterbegin', COLORES.map(c => `<button type="button" data-color="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join(''));
+for (const n of ['date', 'from', 'until']) { F[n].min = MIN_KEY; F[n].max = MAX_KEY; }
+
+document.getElementById('colors').addEventListener('click', e => {
+  const b = e.target.closest('[data-color]');
+  if (!b) return;
+  F.color.value = b.dataset.color;
+  if (editing) editing.colorTouched = true;
+});
+F.color.addEventListener('input', () => { if (editing) editing.colorTouched = true; });
+form.querySelectorAll('[data-days]').forEach(b => b.onclick = () => {
+  const set = b.dataset.days.split(',');
+  form.querySelectorAll('input[name=day]').forEach(x => { x.checked = set.includes(x.value); });
+});
+form.querySelectorAll('input[name=type]').forEach(r => r.onchange = () => applyType(r.value));
+F.date.addEventListener('change', () => {
+  if (isDateStr(F.date.value) && (!isDateStr(F.endDate.value) || F.endDate.value < F.date.value)) F.endDate.value = F.date.value;
+});
+let staleView = false;
+dlg.addEventListener('close', () => {
+  clearSel();
+  if (staleView) { staleView = false; render({ keepScroll: true }); }
+});
+
+// Si la página está abierta en otra pestaña y allí se guarda algo, se recarga aquí
+// para no pisar esos cambios al guardar desde esta pestaña.
+window.addEventListener('storage', e => {
+  if (e.key !== STORE_KEY) return;
+  loadData();
+  if (dlg.open || drag || mdrag) staleView = true;
+  else render({ keepScroll: true });
+});
+
+function applyType(type) {
+  editing.type = type;
+  form.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(type); });
+  document.getElementById('dlgTitle').textContent = editing.id ? EDITAR[type] : NUEVO[type];
+  document.getElementById('nameLbl').textContent = type === 'birthday' ? 'Nombre de la persona' : 'Nombre';
+  document.getElementById('dateLbl').textContent = { task: 'Fecha de inicio', festivo: 'Fecha de inicio', birthday: 'Día del cumpleaños' }[type] || 'Fecha';
+  if (!editing.id && !editing.colorTouched) F.color.value = COLOR_DEFECTO[type];
+  // Un festivo nuevo es de un solo día salvo que venga de arrastrar varios días
+  if (type === 'festivo' && !editing.id && !editing.dayRange) F.endDate.value = F.date.value;
+  errEl.textContent = '';
+}
+
+function openForm(type, item, preset = {}) {
+  const p = { ...defaultPreset(), ...preset };
+  editing = { type, id: item ? item.id : null, colorTouched: false, dayRange: !!p.dayRange };
+  form.reset();
+  document.getElementById('types').hidden = !!item;
+  form.querySelectorAll('input[name=type]').forEach(r => {
+    r.closest('label').hidden = !!p.timedOnly && !['task', 'routine'].includes(r.value);
+    r.checked = r.value === type;
+  });
+  document.getElementById('del').hidden = !item;
+
+  F.title.value = item?.title || '';
+  F.desc.value = item?.desc || '';
+  F.color.value = item?.color || COLOR_DEFECTO[type];
+  F.date.value = p.date;
+  F.time.value = p.time;
+  F.endDate.value = p.endDate || p.date;
+  F.endTime.value = p.endTime;
+  F.from.value = p.date;
+  F.until.value = '';
+  F.skip.checked = true;
+  F.done.checked = false;
+  let days = [dow(fromKey(p.date))];
+
+  if (type === 'task' && item) {
+    const s = absStart(item.date, item.time), e = s + item.dur;
+    F.date.value = item.date;
+    F.time.value = item.time;
+    F.endDate.value = key(absToDate(e));
+    F.endTime.value = hm(e);
+    F.done.checked = !!item.done;
+  } else if (type === 'routine' && item) {
+    F.time.value = item.time;
+    F.endTime.value = hm(toMin(item.time) + item.dur);
+    F.from.value = item.from;
+    F.until.value = item.until || '';
+    F.skip.checked = !!item.skipHolidays;
+    days = item.days;
+  } else if (type === 'festivo' && item) {
+    F.date.value = item.date;
+    F.endDate.value = festEnd(item);
+  } else if (type === 'birthday' && item) {
+    let y = state.cursor.getUTCFullYear();
+    if (item.month === 2 && item.day === 29) y = 2028;
+    F.date.value = `${y}-${pad(item.month)}-${pad(item.day)}`;
+  }
+  form.querySelectorAll('input[name=day]').forEach(x => { x.checked = days.includes(+x.value); });
+
+  applyType(type);
+  dlg.showModal();
+  F.title.focus();
+}
+
+function fail(msg, field) {
+  errEl.textContent = msg;
+  if (field) field.focus();
+}
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const type = editing.type;
+  const title = F.title.value.trim();
+  if (!title) return fail(type === 'birthday' ? 'Escribe el nombre de la persona.' : 'Ponle un nombre.', F.title);
+  const base = { id: editing.id || uid(), title, color: F.color.value, updated: Date.now() };
+  let item;
+
+  if (type === 'task') {
+    if (!validKey(F.date.value)) return fail(`Elige una fecha de inicio entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.date);
+    if (!F.time.value) return fail('Elige la hora de inicio.', F.time);
+    if (!isDateStr(F.endDate.value)) return fail('Elige la fecha de fin.', F.endDate);
+    if (!F.endTime.value) return fail('Elige la hora de fin.', F.endTime);
+    const dur = absStart(F.endDate.value, F.endTime.value) - absStart(F.date.value, F.time.value);
+    if (dur <= 0) return fail('El fin tiene que ser posterior al inicio.', F.endTime);
+    if (dur < 15) return fail('La duración mínima es de 15 minutos.', F.endTime);
+    if (dur > TAREA_MAX_MIN) return fail('La duración máxima es de 12 semanas.', F.endDate);
+    item = { ...base, desc: F.desc.value.trim(), date: F.date.value, time: F.time.value.slice(0, 5), dur, done: F.done.checked };
+  } else if (type === 'routine') {
+    if (!F.time.value) return fail('Elige la hora de inicio.', F.time);
+    if (!F.endTime.value) return fail('Elige la hora de fin.', F.endTime);
+    const dur = ((toMin(F.endTime.value) - toMin(F.time.value)) + 1440) % 1440 || 1440;
+    if (dur < 15) return fail('La duración mínima es de 15 minutos.', F.endTime);
+    const days = [...form.querySelectorAll('input[name=day]:checked')].map(x => +x.value);
+    if (!days.length) return fail('Marca al menos un día de la semana.');
+    if (!validKey(F.from.value)) return fail(`Elige una fecha de inicio entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.from);
+    if (F.until.value && !validKey(F.until.value)) return fail(`La fecha final debe estar entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.until);
+    if (F.until.value && F.until.value < F.from.value) return fail('La fecha final no puede ser anterior a la de inicio.', F.until);
+    item = { ...base, desc: F.desc.value.trim(), time: F.time.value.slice(0, 5), dur, days, from: F.from.value, until: F.until.value, skipHolidays: F.skip.checked };
+  } else if (type === 'festivo') {
+    if (!validKey(F.date.value)) return fail(`Elige una fecha de inicio entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.date);
+    const end = F.endDate.value || F.date.value;
+    if (!validKey(end)) return fail(`La fecha de fin debe estar entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.endDate);
+    if (end < F.date.value) return fail('La fecha de fin no puede ser anterior a la de inicio.', F.endDate);
+    if ((fromKey(end) - fromKey(F.date.value)) / DAY >= 366) return fail('Un festivo puede durar como mucho un año.', F.endDate);
+    item = { ...base, desc: F.desc.value.trim(), date: F.date.value, endDate: end };
+  } else {
+    if (!isDateStr(F.date.value)) return fail('Elige el día del cumpleaños.', F.date);
+    const [, m, d] = F.date.value.split('-').map(Number);
+    item = { ...base, month: m, day: d };
+  }
+
+  // Misma validación que al cargar, para que nunca se guarde algo que luego no se pueda leer
+  item = cleanItem(type, item);
+  if (!item) return fail('Revisa los datos: hay algún campo con un formato no válido.');
+  const list = data[COLLECTION[type]];
+  const i = list.findIndex(x => x.id === item.id);
+  if (i >= 0) list[i] = item; else list.push(item);
+  saveData();
+  dlg.close();
+  render({ keepScroll: true });
+});
+
+document.getElementById('cancel').onclick = () => dlg.close();
+document.getElementById('del').onclick = () => {
+  const item = findItem(editing.type, editing.id);
+  if (!item) return;
+  const extra = editing.type === 'routine' ? ' Se borrarán todas sus repeticiones.' : '';
+  if (!confirm(`¿Eliminar «${item.title}»?${extra}`)) return;
+  const list = data[COLLECTION[editing.type]];
+  list.splice(list.indexOf(item), 1);
+  data.deleted[item.id] = Date.now();
+  saveData();
+  dlg.close();
+  render({ keepScroll: true });
+};
+
+/* ---------- Copias de seguridad ---------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify({ version: 3, exportado: new Date().toISOString(), ...data }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `calendario-copia-${key(madridNow().date)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.getElementById('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error('demasiado grande');
+    const { data: d, dropped } = sanitize(JSON.parse(await file.text()));
+    const ignored = dropped ? `\n\n${dropped} elemento${dropped > 1 ? 's' : ''} no válido${dropped > 1 ? 's' : ''} se ignorará${dropped > 1 ? 'n' : ''}.` : '';
+    if (!confirm(`La copia tiene ${d.tasks.length} tareas, ${d.routines.length} rutinas, ${d.festivos.length} festivos y ${d.birthdays.length} cumpleaños.${ignored}\n\n¿Sustituir los datos actuales por los de la copia?`)) return;
+    // Sustituir = lo de la copia pasa a ser lo más reciente y lo que no está en ella se marca
+    // como borrado, para que la sincronización no lo vuelva a traer de otro dispositivo.
+    const now = Date.now();
+    const keep = new Set(Object.values(COLLECTION).flatMap(c => d[c].map(x => x.id)));
+    for (const c of Object.values(COLLECTION)) {
+      for (const x of d[c]) x.updated = now;
+      for (const x of data[c]) if (!keep.has(x.id)) d.deleted[x.id] = now;
+    }
+    for (const [id, t] of Object.entries(data.deleted)) if (!keep.has(id) && !(d.deleted[id] >= t)) d.deleted[id] = t;
+    data = d;
+    saveData();
+    render();
+  } catch {
+    alert('Ese archivo no es una copia válida del calendario.');
+  }
+});
+
+/* =====================================================================
+   SINCRONIZACIÓN CON GOOGLE DRIVE
+   Los datos se guardan en la carpeta oculta de la app dentro de tu Drive («appDataFolder»).
+   La página solo puede ver esa carpeta, no el resto de tus archivos, y no aparece en tu Drive.
+   ===================================================================== */
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_FILE = 'calendario-datos.json';
+const SYNC_KEY = `${CLAVE_DATOS}.sync`;
+const SYNC_TEXT = {
+  off: 'Sin conectar', syncing: 'Sincronizando…', ok: 'Sincronizado', reauth: 'Hay que volver a iniciar sesión',
+  offline: 'Sin conexión: se sincronizará al volver', error: 'Error al sincronizar',
+};
+const syncAvailable = () => !!GOOGLE_CLIENT_ID && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname));
+const sync = { st: { connected: false, token: '', exp: 0, last: 0 }, status: 'off', msg: '', client: null, timer: 0, running: false, again: false };
+try {
+  const s = JSON.parse(localStorage.getItem(SYNC_KEY) || '{}');
+  sync.st = { connected: s.connected === true, token: typeof s.token === 'string' ? s.token : '', exp: Number(s.exp) || 0, last: Number(s.last) || 0 };
+} catch {}
+const saveSyncState = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(sync.st)); } catch {} };
+// El permiso de Google dura 1 hora; después hay que pedirlo otra vez (es un toque, sin escribir nada)
+const tokenOk = () => !!sync.st.token && sync.st.exp > Date.now() + 60000;
+const syncBtn = document.getElementById('syncBtn');
+const syncDlg = document.getElementById('syncDlg');
+
+function setStatus(status, msg = '') {
+  sync.status = status;
+  sync.msg = msg;
+  syncBtn.dataset.state = sync.st.connected ? status : 'off';
+  syncBtn.title = sync.st.connected ? `Google Drive: ${SYNC_TEXT[status]}` : 'Sincronizar con Google Drive';
+  if (syncDlg.open) renderSyncPanel();
+}
+
+// Carga el acceso de Google (solo cuando hace falta)
+function loadGis() {
+  if (!syncAvailable() || sync.client) return;
+  const init = () => {
+    sync.client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: finishToken,
+      error_callback: err => finishToken({ error: (err && err.type) || 'error' }),
+    });
+    if (syncDlg.open) renderSyncPanel();
+  };
+  if (window.google && google.accounts && google.accounts.oauth2) return init();
+  if (document.getElementById('gis')) return;
+  const s = document.createElement('script');
+  s.id = 'gis';
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.async = true;
+  s.onload = init;
+  s.onerror = () => s.remove(); // sin conexión: se reintentará más tarde
+  document.head.appendChild(s);
+}
+
+// Debe llamarse directamente desde un toque o clic (Google abre una ventanita)
+function requestToken(reauth) {
+  if (!sync.client) { loadGis(); setStatus(sync.status, 'Cargando el acceso de Google… vuelve a pulsar en unos segundos.'); return; }
+  sync.client.requestAccessToken(reauth ? { prompt: '' } : {});
+}
+
+function finishToken(r) {
+  if (!r || r.error || !r.access_token) {
+    const cancelled = r && (r.error === 'popup_closed' || r.error === 'access_denied');
+    setStatus(sync.st.connected ? 'reauth' : 'off', cancelled ? '' : 'No se ha podido iniciar sesión con Google. Si el navegador bloquea ventanas emergentes, permítelas para esta página.');
+    return;
+  }
+  if (!google.accounts.oauth2.hasGrantedAllScopes(r, DRIVE_SCOPE)) {
+    setStatus(sync.st.connected ? 'reauth' : 'off', 'Hace falta marcar el permiso para guardar en Google Drive.');
+    return;
+  }
+  sync.st.connected = true;
+  sync.st.token = r.access_token;
+  sync.st.exp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
+  saveSyncState();
+  runSync();
+}
+
+async function drive(path, opts = {}) {
+  const res = await fetch(`https://www.googleapis.com/${path}`, {
+    ...opts,
+    headers: { Authorization: `Bearer ${sync.st.token}`, ...(opts.headers || {}) },
+  });
+  if (res.status === 401) {
+    sync.st.token = '';
+    sync.st.exp = 0;
+    saveSyncState();
+    throw Object.assign(new Error('auth'), { auth: true });
+  }
+  if (!res.ok) throw new Error(`Google Drive respondió ${res.status}`);
+  return res;
+}
+
+async function uploadDrive(fileId, body) {
+  if (fileId) {
+    await drive(`upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body,
+    });
+    return;
+  }
+  const b = `calendario${Date.now()}`;
+  const meta = JSON.stringify({ name: DRIVE_FILE, parents: ['appDataFolder'], mimeType: 'application/json' });
+  await drive('upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${b}` },
+    body: `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`,
+  });
+}
+
+// Descarga lo que hay en Drive, lo une con lo de este dispositivo y sube el resultado
+async function runSync() {
+  if (!sync.st.connected || !syncAvailable()) return;
+  if (sync.running) { sync.again = true; return; }
+  if (!navigator.onLine) return setStatus('offline');
+  if (!tokenOk()) return setStatus('reauth');
+  sync.running = true;
+  setStatus('syncing');
+  try {
+    const q = encodeURIComponent(`name='${DRIVE_FILE}' and trashed=false`);
+    const list = await (await drive(`drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)&orderBy=modifiedTime%20desc&pageSize=10`)).json();
+    const files = Array.isArray(list.files) ? list.files.filter(f => f && typeof f.id === 'string') : [];
+    let remote = emptyData();
+    for (const f of files) {
+      const res = await drive(`drive/v3/files/${encodeURIComponent(f.id)}?alt=media`);
+      let json = null;
+      try { json = JSON.parse(await res.text()); } catch {}
+      remote = mergeData(remote, normalize(json)); // lo de Drive se valida igual que una copia importada
+    }
+    const merged = mergeData(data, remote);
+    if (!files.length || files.length > 1 || canon(merged) !== canon(remote)) {
+      await uploadDrive(files[0] && files[0].id, JSON.stringify({ version: 3, guardado: new Date().toISOString(), ...merged }));
+      // Si dos dispositivos crearon el archivo a la vez, se queda uno solo
+      for (const f of files.slice(1)) await drive(`drive/v3/files/${encodeURIComponent(f.id)}`, { method: 'DELETE' }).catch(() => {});
+    }
+    // Lo que se haya cambiado aquí mientras tanto se conserva al volver a unir con lo local
+    const next = mergeData(data, merged);
+    if (canon(next) !== canon(data)) {
+      data = next;
+      writeLocal();
+      if (dlg.open || drag || mdrag) staleView = true;
+      else render({ keepScroll: true });
+    }
+    sync.st.last = Date.now();
+    saveSyncState();
+    setStatus('ok');
+  } catch (e) {
+    if (e.auth) setStatus('reauth');
+    else setStatus(navigator.onLine ? 'error' : 'offline', navigator.onLine ? 'No se ha podido sincronizar; se volverá a intentar en un rato.' : '');
+  } finally {
+    sync.running = false;
+    if (sync.again) { sync.again = false; syncSoon(); }
+  }
+}
+
+function syncSoon() {
+  if (!sync.st.connected || !syncAvailable()) return;
+  clearTimeout(sync.timer);
+  if (!tokenOk()) return setStatus('reauth', 'Hay cambios sin subir a Drive.');
+  sync.timer = setTimeout(runSync, 1500);
+}
+
+function disconnectSync() {
+  if (!confirm('¿Dejar de sincronizar este dispositivo? Tus datos se quedan aquí y en tu Drive.')) return;
+  clearTimeout(sync.timer);
+  sync.st = { connected: false, token: '', exp: 0, last: 0 };
+  saveSyncState();
+  setStatus('off');
+}
+
+function renderSyncPanel() {
+  const body = document.getElementById('syncBody');
+  const privacy = '<p class="sub">Tus datos se guardan en una carpeta oculta de tu Google Drive que solo esta página puede leer. La página no tiene acceso al resto de tus archivos.</p>';
+  if (!GOOGLE_CLIENT_ID) {
+    body.innerHTML = '<p>La sincronización todavía no está configurada. Sigue los pasos de <b>INSTRUCCIONES.md</b> para crear el «ID de cliente» de Google y pégalo en <code>GOOGLE_CLIENT_ID</code>, al principio del código.</p>';
+    return;
+  }
+  if (!syncAvailable()) {
+    body.innerHTML = '<p>La sincronización solo funciona cuando la página está publicada en internet (una dirección que empieza por <b>https://</b>, por ejemplo GitHub Pages). Abierta como archivo, Google no permite iniciar sesión.</p>';
+    return;
+  }
+  const msg = `<p class="msg">${esc(sync.msg)}</p>`;
+  if (!sync.st.connected) {
+    body.innerHTML = `<p>Conecta tu cuenta de Google para tener el calendario igual en el móvil, el portátil y cualquier otro dispositivo.</p>${privacy}
+      ${msg}<div class="btns"><button class="btn primary" data-sync="connect">Conectar con Google Drive</button></div>`;
+    return;
+  }
+  const colors = { ok: '#30a46c', syncing: 'var(--accent)', reauth: '#f0a000', error: 'var(--nac)', offline: 'var(--muted)' };
+  const last = sync.st.last ? new Date(sync.st.last).toLocaleString('es-ES', { timeZone: TZ, dateStyle: 'short', timeStyle: 'short' }) : 'nunca';
+  body.innerHTML = `<p class="state"><i style="background:${colors[sync.status] || 'var(--muted)'}"></i>${SYNC_TEXT[sync.status] || ''}</p>
+    <p class="sub">Última sincronización: ${last}</p>
+    ${sync.status === 'reauth' ? '<p>Por seguridad, Google da el permiso por 1 hora. Pulsa «Sincronizar ahora» para renovarlo (solo es un toque).</p>' : ''}
+    ${msg}${privacy}
+    <div class="btns"><button class="btn primary" data-sync="now">Sincronizar ahora</button><button class="btn" data-sync="off">Dejar de sincronizar</button></div>`;
+}
+
+syncBtn.onclick = () => {
+  // Si solo falta renovar el permiso, se hace directamente sin abrir el panel
+  if (sync.st.connected && sync.status === 'reauth' && sync.client && navigator.onLine) return requestToken(true);
+  loadGis();
+  renderSyncPanel();
+  syncDlg.showModal();
+};
+document.getElementById('syncClose').onclick = () => syncDlg.close();
+document.getElementById('syncBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-sync]');
+  if (!b) return;
+  const act = b.dataset.sync;
+  if (act === 'connect') requestToken(false);
+  else if (act === 'now') { if (tokenOk()) runSync(); else requestToken(true); }
+  else if (act === 'off') disconnectSync();
+});
+
+function initSync() {
+  if (!sync.st.connected || !syncAvailable()) return setStatus('off');
+  loadGis();
+  if (tokenOk()) runSync(); else setStatus('reauth');
+}
+window.addEventListener('online', () => runSync());
+window.addEventListener('offline', () => { if (sync.st.connected) setStatus('offline'); });
+// Al volver a la página (por ejemplo, al abrir la app en el móvil) se traen los cambios
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') runSync(); });
+setInterval(() => { if (document.visibilityState === 'visible' && tokenOk()) runSync(); }, 3 * 60000);
+
+/* ---------- App instalable y uso sin conexión ---------- */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* ---------- Reloj ---------- */
+const clockEl = document.getElementById('clock');
+let lastMinute = null;
+function tick() {
+  const n = madridNow();
+  const dt = n.date;
+  clockEl.innerHTML = `España peninsular · ${pad(dt.getUTCDate())}/${pad(dt.getUTCMonth() + 1)}/${dt.getUTCFullYear()} <b>${pad(n.h)}:${pad(n.mi)}:${pad(n.s)}</b> ${n.zone} (${OFFSET[n.zone]})`;
+  const stamp = `${key(dt)} ${n.h} ${n.mi} ${n.zone}`;
+  if (lastMinute !== null && stamp !== lastMinute && !dlg.open && !drag && !mdrag) render({ keepScroll: true });
+  lastMinute = stamp;
+}
+
+render();
+tick();
+setInterval(tick, 1000);
+initSync();
+</script>
+</body>
+</html>
