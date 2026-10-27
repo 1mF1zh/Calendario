@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- La página solo puede conectarse con Google (inicio de sesión y Drive para sincronizar).
-     Cualquier otra conexión o carga externa está bloqueada. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; connect-src https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<!-- La página solo puede conectarse con Google (inicio de sesión y Drive para sincronizar)
+     y con Open-Meteo (predicción del tiempo). Cualquier otra conexión o carga externa está bloqueada. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; connect-src https://www.googleapis.com https://accounts.google.com/gsi/ https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://accounts.google.com/gsi/; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#2f5bd3">
 <meta name="mobile-web-app-capable" content="yes">
@@ -262,6 +262,68 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .syncbox .msg:empty{display:none}
 .syncbox .btns{display:flex;flex-wrap:wrap;gap:8px}
 
+/* ---------- Avisos, rutinas tachables y selección en la vista año ---------- */
+.bell{position:relative;display:inline-grid;place-items:center}
+.bell[data-on=on] .sdot{display:block;background:#30a46c}
+.ev input[data-toggle]{float:left;margin:1px 5px 0 0;cursor:pointer}
+.items li.done b{text-decoration:line-through;color:var(--muted)}
+.year{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.mini-grid button.msel{box-shadow:inset 0 0 0 999px color-mix(in srgb,var(--accent) 30%,transparent),inset 0 0 0 2px var(--accent)}
+
+/* ---------- Botones y menús ---------- */
+header{background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 8px 24px -18px rgba(0,0,0,.45)}
+#title{letter-spacing:-.01em}
+.btn{border-radius:10px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.06);transition:background-color .15s,border-color .15s,box-shadow .15s,transform .08s}
+.btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:focus-visible,.views button:focus-visible,.types label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.btn.icon{min-width:36px;height:36px;padding:0 9px;display:inline-grid;place-items:center;border-radius:10px}
+.btn.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 85%,#fff),var(--accent));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 2px 10px -3px color-mix(in srgb,var(--accent) 70%,transparent)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.07);border-color:transparent}
+.btn.danger:hover:not(:disabled){background:var(--nac-soft);border-color:var(--nac)}
+.btn.sm{border-radius:8px}
+.views{background:var(--surface-2);border:0;border-radius:12px;padding:3px;gap:2px}
+.views button{border:0 !important;border-radius:9px;padding:6px 14px;color:var(--muted);font-weight:500;transition:background-color .15s,color .15s,box-shadow .15s}
+.views button:hover{color:var(--text)}
+.views button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.18),0 0 0 1px color-mix(in srgb,var(--line) 60%,transparent)}
+dialog{border-radius:18px;box-shadow:0 30px 70px -25px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(8,8,10,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#form h2,.syncbox h2{font-size:18px;letter-spacing:-.01em}
+.field input:not([type=checkbox]):not([type=color]),.field select,.field textarea{border-radius:10px;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.types{background:var(--surface-2);border:0;border-radius:12px;padding:3px;gap:2px}
+.types label{border:0 !important;border-radius:9px;color:var(--muted);font-weight:500;transition:background-color .15s,color .15s}
+.types label:has(input:checked){background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.days label{border-radius:10px;transition:background-color .15s}
+.colors button{transition:transform .1s}
+.colors button:hover{transform:scale(1.12)}
+.check{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface-2) 50%,transparent)}
+.actions{padding-top:6px;border-top:1px solid var(--line)}
+.side{border-radius:14px}
+.toolbar{gap:10px}
+
+/* ---------- Tiempo ---------- */
+.wx{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.wx-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:14px}
+.wx-days{display:grid;grid-template-columns:repeat(7,minmax(58px,1fr));gap:8px;overflow-x:auto}
+.wx-day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--surface-2);font-size:12px;transition:background-color .15s}
+.wx-day:hover{background:var(--accent-soft)}
+.wx-d{color:var(--muted);font-weight:600;white-space:nowrap}
+.wx-i{font-size:24px;line-height:1.25}
+.wx-t{white-space:nowrap}
+.wx-t b{font-size:14px}
+.wx-r{color:var(--muted);font-size:11px;white-space:nowrap}
+.wx-src{margin:8px 0 0;font-size:11px;color:var(--muted)}
+.wx-src a{color:inherit}
+.wx-h{position:absolute;right:6px;top:4px;font-size:11px;color:var(--muted);pointer-events:none;white-space:nowrap}
+.banner.wxb{background:var(--accent-soft);color:var(--text)}
+.wx-search{display:flex;gap:8px}
+.wx-search input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);font-size:15px}
+.wx-search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+#wxResults{display:flex;flex-direction:column;gap:6px}
+#wxResults button{text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:10px}
+#wxResults button:hover{border-color:var(--accent);background:var(--accent-soft)}
+
 /* ---------- Puntos de la vista mes en el móvil ---------- */
 .mdots{display:none;gap:3px;flex-wrap:wrap;justify-content:center}
 .mdots i{width:6px;height:6px;border-radius:50%}
@@ -286,7 +348,7 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
   header{gap:8px;padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left))}
   .nav{order:1}
   #title{order:2;flex:1;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #syncBtn{order:3}
+  #syncBtn,#notifBtn{order:3}
   .views{order:4;width:100%}
   .views button{flex:1;padding:8px 2px}
   .clock{display:none}
@@ -353,6 +415,9 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
     <button class="btn icon" id="next" aria-label="Siguiente" title="Siguiente (→)">›</button>
   </div>
   <h1 id="title"></h1>
+  <button class="btn icon bell" id="notifBtn" title="Avisos" aria-label="Avisos">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><i class="sdot"></i>
+  </button>
   <button class="btn icon sync" id="syncBtn" title="Sincronización con Google Drive" aria-label="Sincronización con Google Drive">
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 11a4 4 0 0 1-1.5 8z"/></svg><i class="sdot"></i>
   </button>
@@ -417,6 +482,8 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
     <p class="sub" data-for="birthday" style="margin:0">Se repite cada año el mismo día. Si es el 29 de febrero, en los años no bisiestos aparece el 28.</p>
 
     <label class="check" data-for="task"><input type="checkbox" name="done"><span>Hecha</span></label>
+    <label class="check" data-for="task routine birthday"><input type="checkbox" name="notify">
+      <span>🔔 Avisarme cuando empiece<small id="notifyHint"></small></span></label>
 
     <p class="err" id="err" role="alert"></p>
     <div class="actions">
@@ -434,9 +501,35 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
     <div class="actions"><span class="spacer"></span><button type="button" class="btn" id="syncClose">Cerrar</button></div>
   </div>
 </dialog>
+<dialog id="wxDlg">
+  <div class="syncbox">
+    <h2>Localidad del tiempo</h2>
+    <form id="wxForm" class="wx-search">
+      <input name="q" placeholder="Ej.: Barcelona, Sabadell, Girona…" maxlength="80" autocomplete="off" aria-label="Localidad">
+      <button class="btn primary" type="submit">Buscar</button>
+    </form>
+    <div id="wxResults"></div>
+    <p class="sub" style="margin:0">La predicción viene de Open-Meteo (gratuito). Solo se le envía la ubicación de la localidad elegida, nada de tu calendario.</p>
+    <div class="actions"><button type="button" class="btn danger" id="wxRemove">Quitar localidad</button><span class="spacer"></span><button type="button" class="btn" id="wxClose">Cerrar</button></div>
+  </div>
+</dialog>
+<dialog id="notifDlg">
+  <div class="syncbox">
+    <h2>Avisos</h2>
+    <div id="notifBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div class="actions"><span class="spacer"></span><button type="button" class="btn" id="notifClose">Cerrar</button></div>
+  </div>
+</dialog>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <script>
+// Protección contra «clickjacking»: si otra web mete el calendario dentro de un marco
+// para engañar con clics, la página no se carga.
+if (window.top !== window.self) {
+  document.body.textContent = 'Por seguridad, abre el calendario directamente en su propia pestaña.';
+  throw new Error('Página dentro de un marco: bloqueada');
+}
+
 /* =====================================================================
    CONFIGURACIÓN
    ===================================================================== */
@@ -667,20 +760,22 @@ function cleanItem(type, x) {
   };
   if (type === 'task') {
     if (!realDate(x.date) || !RE_TIME.test(x.time) || !int(x.dur, 1, TAREA_MAX_MIN)) return null;
-    return { ...base, desc: str(x.desc, 1000), date: x.date, time: x.time, dur: x.dur, done: x.done === true };
+    return { ...base, desc: str(x.desc, 1000), date: x.date, time: x.time, dur: x.dur, done: x.done === true, notify: x.notify === true };
   }
   if (type === 'routine') {
     const days = Array.isArray(x.days) ? [...new Set(x.days.filter(d => int(d, 0, 6)))] : [];
     if (!RE_TIME.test(x.time) || !int(x.dur, 1, 1440) || !days.length || !realDate(x.from)) return null;
     if (x.until && (!realDate(x.until) || x.until < x.from)) return null;
-    return { ...base, desc: str(x.desc, 1000), time: x.time, dur: x.dur, days, from: x.from, until: x.until || '', skipHolidays: x.skipHolidays === true };
+    // Días en los que se ha marcado como hecha cada repetición de la rutina
+    const doneDates = Array.isArray(x.doneDates) ? [...new Set(x.doneDates.filter(realDate))].sort().slice(-5000) : [];
+    return { ...base, desc: str(x.desc, 1000), time: x.time, dur: x.dur, days, from: x.from, until: x.until || '', skipHolidays: x.skipHolidays === true, notify: x.notify === true, doneDates };
   }
   if (type === 'festivo') {
     if (!realDate(x.date) || (x.endDate && (!realDate(x.endDate) || x.endDate < x.date))) return null;
     return { ...base, desc: str(x.desc, 1000), date: x.date, endDate: x.endDate || x.date };
   }
   if (!int(x.month, 1, 12) || !int(x.day, 1, daysInMonth(2028, x.month - 1))) return null;
-  return { ...base, month: x.month, day: x.day };
+  return { ...base, month: x.month, day: x.day, notify: x.notify === true };
 }
 
 // Devuelve los datos limpios y cuántos elementos se han descartado por no ser válidos
@@ -755,16 +850,18 @@ const routinesCancelled = dt => data.routines.filter(r => r.skipHolidays && rout
 // Trozos de tareas y rutinas que caen en un día (minutos 0–1440 dentro del día)
 function segmentsFor(dt) {
   const d0 = dt.getTime() / 60000, d1 = d0 + 1440, out = [];
-  const add = (kind, item, s, e) => {
-    if (e > d0 && s < d1) out.push({ kind, item, s: Math.max(s, d0) - d0, e: Math.min(e, d1) - d0, contStart: s < d0, contEnd: e > d1, absS: s, absE: e });
+  // occ = día en que empieza esa repetición de la rutina (para marcarla como hecha)
+  const add = (kind, item, s, e, occ) => {
+    if (e > d0 && s < d1) out.push({ kind, item, s: Math.max(s, d0) - d0, e: Math.min(e, d1) - d0, contStart: s < d0, contEnd: e > d1, absS: s, absE: e, occ });
   };
   for (const t of data.tasks) { const s = absStart(t.date, t.time); add('task', t, s, s + t.dur); }
   // Una rutina del día anterior puede pasar de medianoche
   for (const day of [addDays(dt, -1), dt]) {
-    for (const r of data.routines) if (routineOn(r, day)) { const s = absStart(key(day), r.time); add('routine', r, s, s + r.dur); }
+    for (const r of data.routines) if (routineOn(r, day)) { const s = absStart(key(day), r.time); add('routine', r, s, s + r.dur, key(day)); }
   }
   return out.sort((a, b) => a.s - b.s || b.e - a.e);
 }
+const isDone = g => g.kind === 'task' ? !!g.item.done : (g.item.doneDates || []).includes(g.occ);
 
 // Reparte los bloques que se solapan en carriles
 function layout(segs) {
@@ -806,8 +903,9 @@ function evHTML(g, pos) {
     return `<div class="ev task${it.done ? ' done' : ''}" style="${st}background:${it.color}38;border-left-color:${it.color}" data-edit="task|${it.id}" title="${tip}">
       <input type="checkbox" data-toggle="${it.id}" ${it.done ? 'checked' : ''} style="accent-color:${it.color}" aria-label="Marcar como hecha"><b>${esc(it.title)}</b><span>${rangeLabel(g)}</span></div>`;
   }
-  return `<div class="ev" style="${st}background:${it.color};color:${textOn(it.color)}" data-edit="routine|${it.id}" title="${tip}">
-    <b>${esc(it.title)}</b><span>${rangeLabel(g)}</span></div>`;
+  const done = isDone(g);
+  return `<div class="ev${done ? ' done' : ''}" style="${st}background:${it.color};color:${textOn(it.color)}" data-edit="routine|${it.id}" title="${tip}">
+    <input type="checkbox" data-toggle="${it.id}|${g.occ}" ${done ? 'checked' : ''} aria-label="Marcar como hecha este día"><b>${esc(it.title)}</b><span>${rangeLabel(g)}</span></div>`;
 }
 
 function textOn(hex) {
@@ -955,6 +1053,7 @@ function renderYear(now) {
         <li><span>Tareas pendientes</span><span>${pending}</span></li>
       </ul>
       <p class="note">Festivos calculados según el calendario laboral habitual de Cataluña. Los 2 festivos locales de cada municipio no se incluyen: puedes añadirlos en <code>FESTIVOS_EXTRA</code> al principio del código.</p>
+      <p class="note">Consejo: mantén pulsado y arrastra sobre los días (también entre meses) para crear un festivo personal.</p>
     </aside>
   </div>`;
 }
@@ -981,11 +1080,11 @@ function renderMonth(now) {
       const segs = segmentsFor(dt);
       const shown = segs.slice(0, 3).map(g => {
         const dot = g.item.color;
-        return `<span class="echip${g.kind === 'task' && g.item.done ? ' done' : ''}" data-edit="${g.kind}|${g.item.id}" title="${esc(g.item.title + ' (' + rangeLabel(g) + ')')}"><i style="background:${dot}"></i>${g.contStart ? '↳ ' : hm(g.absS) + ' '}${esc(g.item.title)}</span>`;
+        return `<span class="echip${isDone(g) ? ' done' : ''}" data-edit="${g.kind}|${g.item.id}" title="${esc(g.item.title + ' (' + rangeLabel(g) + ')')}"><i style="background:${dot}"></i>${g.contStart ? '↳ ' : hm(g.absS) + ' '}${esc(g.item.title)}</span>`;
       }).join('');
       const more = segs.length > 3 ? `<span class="more">+${segs.length - 3} más</span>` : '';
       // En pantallas estrechas las etiquetas no caben: se ve un punto de color por elemento
-      const dots = [...birthdaysOf(dt).map(b => b.color), ...segs.filter(g => !(g.kind === 'task' && g.item.done)).map(g => g.item.color)]
+      const dots = [...birthdaysOf(dt).map(b => b.color), ...segs.filter(g => !isDone(g)).map(g => g.item.color)]
         .slice(0, 5).map(col => `<i style="background:${col}"></i>`).join('');
       html += `<div class="${c.join(' ')}" style="${look.style}" role="button" tabindex="0" data-go="day|${key(dt)}" title="${dayTitle(dt)}"><span class="num">${dt.getUTCDate()}</span>${dots ? `<span class="mdots">${dots}</span>` : ''}${holidayChips(dt)}${dstChip(dt)}${shown}${more}</div>`;
     }
@@ -1076,6 +1175,7 @@ function renderDay(now) {
     <b>${esc(f.title)}</b> · festivo personal (${festRange(f) || 'todo el día'})${f.desc ? `<p>${esc(f.desc)}</p>` : ''}</div>`).join('');
   banners += birthdaysOf(dt).map(b => `<div class="banner" style="${softStyle(b.color)}" data-edit="birthday|${b.id}" title="Editar cumpleaños">
     🎂 <b>Cumpleaños de ${esc(b.title)}</b></div>`).join('');
+  banners += wxDayBanner(dt);
   if (z === 'spring') banners += `<div class="banner dst"><b>Cambio al horario de verano.</b> A las 02:00 los relojes se adelantan a las 03:00. Este día tiene 23 horas.</div>`;
   if (z === 'fall') banners += `<div class="banner dst"><b>Cambio al horario de invierno.</b> A las 03:00 los relojes se atrasan a las 02:00. Este día tiene 25 horas.</div>`;
   banners += segs.filter(isAllDay).map(g => `<div class="banner" style="${softStyle(g.item.color)}" data-edit="task|${g.item.id}" title="Editar tarea">
@@ -1088,7 +1188,7 @@ function renderDay(now) {
     const c = ['slot'];
     if (s.h < 7 || s.h >= 22) c.push('night');
     if (s.repeat) c.push('repeat');
-    rows += `<div class="${c.join(' ')}${cur}" data-slot="${key(dt)}|${s.h * 60}">${s.note ? `<span class="slot-note">${s.note}</span>` : ''}</div>`;
+    rows += `<div class="${c.join(' ')}${cur}" data-slot="${key(dt)}|${s.h * 60}">${s.note ? `<span class="slot-note">${s.note}</span>` : ''}${wxHour(dt, s)}</div>`;
   });
   const evs = layout(segs.filter(g => !isAllDay(g))).map(g => evHTML(g, dayRowPos(dt))).join('');
   const line = curIdx >= 0 ? `<div class="nowline" style="top:calc(var(--row) * ${curIdx + now.mi / 60})"></div>` : '';
@@ -1102,7 +1202,7 @@ function renderDay(now) {
   const tasks = segs.filter(g => g.kind === 'task');
   const routines = segs.filter(g => g.kind === 'routine');
   const taskList = tasks.length ? tasks.map(g => taskItem(g.item, rangeLabel(g))).join('') : '<li class="empty">Sin tareas</li>';
-  const routineList = routines.map(g => routineItem(g.item, rangeLabel(g))).join('')
+  const routineList = routines.map(g => routineItem(g.item, rangeLabel(g), g)).join('')
     + cancelled.map(r => `<li><span class="dot" style="background:${r.color};opacity:.4"></span><div class="grow"><b class="cancel">${esc(r.title)}</b><span class="sub">Cancelada por festivo</span></div></li>`).join('')
     || '<li class="empty">Sin rutinas</li>';
   const nextHour = isToday ? Math.min(now.h + 1, 23) : 9;
@@ -1151,10 +1251,14 @@ function taskItem(t, when) {
     <button class="btn sm" data-edit="task|${t.id}">Editar</button></li>`;
 }
 
-function routineItem(r, when) {
+// g (opcional) = una repetición concreta: entonces se puede tachar ese día
+function routineItem(r, when, g) {
   const range = r.until ? `del ${shortDate(fromKey(r.from))} ${r.from.slice(0, 4)} al ${shortDate(fromKey(r.until))} ${r.until.slice(0, 4)}` : `desde ${shortDate(fromKey(r.from))} ${r.from.slice(0, 4)}`;
   when = when || `${daysLabel(r.days)} · ${r.time}–${hm(toMin(r.time) + r.dur)} · ${range}${r.skipHolidays ? ' · no cuenta en festivos' : ''}`;
-  return `<li><span class="dot" style="background:${r.color}"></span>
+  const lead = g
+    ? `<input type="checkbox" data-toggle="${r.id}|${g.occ}" ${isDone(g) ? 'checked' : ''} style="accent-color:${r.color}" aria-label="Marcar como hecha este día">`
+    : `<span class="dot" style="background:${r.color}"></span>`;
+  return `<li class="${g && isDone(g) ? 'done' : ''}">${lead}
     <div class="grow"><b>${esc(r.title)}</b><span class="sub">${when}</span>${r.desc ? `<p>${esc(r.desc)}</p>` : ''}</div>
     <button class="btn sm" data-edit="routine|${r.id}">Editar</button></li>`;
 }
@@ -1244,6 +1348,7 @@ function render({ keepScroll = false } = {}) {
   const prevScroll = keepScroll && sc ? sc.scrollTop : null;
   const prevMain = keepScroll ? main.scrollTop : 0;
   renderers[state.view](now);
+  if (['year', 'month', 'week'].includes(state.view)) main.insertAdjacentHTML('beforeend', weatherStrip());
   document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === state.view));
   document.getElementById('prev').disabled = !canStep(-1);
   document.getElementById('next').disabled = !canStep(1);
@@ -1280,7 +1385,20 @@ function defaultPreset() {
 main.addEventListener('change', e => {
   const t = e.target.closest('[data-toggle]');
   if (!t) return;
-  const task = findItem('task', t.dataset.toggle);
+  const [id, occ] = t.dataset.toggle.split('|');
+  if (occ) {
+    // Rutina: se marca solo la repetición de ese día
+    const r = findItem('routine', id);
+    if (!r) return;
+    const set = new Set(r.doneDates || []);
+    if (t.checked) set.add(occ); else set.delete(occ);
+    r.doneDates = [...set].sort();
+    r.updated = Date.now();
+    saveData();
+    render({ keepScroll: true });
+    return;
+  }
+  const task = findItem('task', id);
   if (task) { task.done = t.checked; task.updated = Date.now(); saveData(); render({ keepScroll: true }); }
 });
 
@@ -1326,7 +1444,7 @@ main.addEventListener('keydown', e => {
 // En la semana no, porque ahí deslizar sirve para ver el resto de días.
 let swipe = null;
 main.addEventListener('touchstart', e => {
-  swipe = e.touches.length === 1 && !e.target.closest('.week') ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null;
+  swipe = e.touches.length === 1 && !e.target.closest('.week, .wx-days') ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null;
 }, { passive: true });
 main.addEventListener('touchend', e => {
   const s = swipe;
@@ -1343,7 +1461,7 @@ new ResizeObserver(setHdr).observe(headerEl);
 setHdr();
 
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey || e.metaKey || e.altKey || dlg.open || syncDlg.open || /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || dlg.open || syncDlg.open || notifDlg.open || wxDlg.open || /input|textarea|select/i.test(e.target.tagName)) return;
   const map = { a: 'year', m: 'month', s: 'week', d: 'day', l: 'list' };
   const k = e.key.toLowerCase();
   if (e.key === 'ArrowLeft') step(-1);
@@ -1392,7 +1510,9 @@ const cancelDrags = () => { if (drag || mdrag) { drag = mdrag = null; clearSel()
 window.addEventListener('blur', cancelDrags);
 document.addEventListener('pointercancel', cancelDrags);
 const cellKey = c => c.dataset.go.split('|')[1];
-const cellAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('.mcell[data-go]'); };
+// Días que se pueden seleccionar arrastrando: los de la vista Mes y los de la vista Año
+const DAY_CELLS = '.mcell[data-go], .mini-grid button[data-go]';
+const cellAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest(DAY_CELLS); };
 
 // Con ratón la selección empieza al pulsar. Con el dedo hay que mantener pulsado un momento,
 // para que deslizar siga sirviendo para desplazarse por la página.
@@ -1413,11 +1533,11 @@ document.addEventListener('contextmenu', e => { if (drag || mdrag || press) e.pr
 
 function paintMonthSel() {
   const [a, b] = [mdrag.a, mdrag.c].sort();
-  main.querySelectorAll('.mcell[data-go]').forEach(c => { const k = cellKey(c); c.classList.toggle('msel', k >= a && k <= b); });
+  main.querySelectorAll(DAY_CELLS).forEach(c => { const k = cellKey(c); c.classList.toggle('msel', k >= a && k <= b); });
 }
 
 main.addEventListener('pointerdown', e => {
-  const cell = e.target.closest('.mcell[data-go]');
+  const cell = e.target.closest(DAY_CELLS);
   if (!cell || e.target.closest('[data-edit]')) return;
   const k = cellKey(cell), touch = e.pointerType !== 'mouse';
   // Con el dedo, mantener pulsado ya cuenta como selección (aunque sea de un solo día)
@@ -1538,9 +1658,15 @@ dlg.addEventListener('close', () => {
 window.addEventListener('storage', e => {
   if (e.key !== STORE_KEY) return;
   loadData();
+  refreshView();
+});
+
+// Vuelve a dibujar tras un cambio que llega por su cuenta (otra pestaña, sincronización, tiempo)
+// sin cerrar lo que se esté editando ni cortar un arrastre
+function refreshView() {
   if (dlg.open || drag || mdrag) staleView = true;
   else render({ keepScroll: true });
-});
+}
 
 function applyType(type) {
   editing.type = type;
@@ -1551,6 +1677,8 @@ function applyType(type) {
   if (!editing.id && !editing.colorTouched) F.color.value = COLOR_DEFECTO[type];
   // Un festivo nuevo es de un solo día salvo que venga de arrastrar varios días
   if (type === 'festivo' && !editing.id && !editing.dayRange) F.endDate.value = F.date.value;
+  document.getElementById('notifyHint').textContent = (type === 'birthday' ? 'Te avisa a las 09:00 del día del cumpleaños.' : 'Te avisa a la hora de inicio.')
+    + (notifActive() ? '' : ' Antes tienes que activar los avisos con la campana de arriba.');
   errEl.textContent = '';
 }
 
@@ -1576,6 +1704,7 @@ function openForm(type, item, preset = {}) {
   F.until.value = '';
   F.skip.checked = true;
   F.done.checked = false;
+  F.notify.checked = !!(item && item.notify);
   let days = [dow(fromKey(p.date))];
 
   if (type === 'task' && item) {
@@ -1617,7 +1746,7 @@ form.addEventListener('submit', e => {
   const type = editing.type;
   const title = F.title.value.trim();
   if (!title) return fail(type === 'birthday' ? 'Escribe el nombre de la persona.' : 'Ponle un nombre.', F.title);
-  const base = { id: editing.id || uid(), title, color: F.color.value, updated: Date.now() };
+  const base = { id: editing.id || uid(), title, color: F.color.value, updated: Date.now(), notify: F.notify.checked };
   let item;
 
   if (type === 'task') {
@@ -1640,7 +1769,8 @@ form.addEventListener('submit', e => {
     if (!validKey(F.from.value)) return fail(`Elige una fecha de inicio entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.from);
     if (F.until.value && !validKey(F.until.value)) return fail(`La fecha final debe estar entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.until);
     if (F.until.value && F.until.value < F.from.value) return fail('La fecha final no puede ser anterior a la de inicio.', F.until);
-    item = { ...base, desc: F.desc.value.trim(), time: F.time.value.slice(0, 5), dur, days, from: F.from.value, until: F.until.value, skipHolidays: F.skip.checked };
+    const prev = editing.id ? findItem('routine', editing.id) : null;
+    item = { ...base, desc: F.desc.value.trim(), time: F.time.value.slice(0, 5), dur, days, from: F.from.value, until: F.until.value, skipHolidays: F.skip.checked, doneDates: prev ? prev.doneDates : [] };
   } else if (type === 'festivo') {
     if (!validKey(F.date.value)) return fail(`Elige una fecha de inicio entre ${AÑO_MIN} y ${AÑO_MAX}.`, F.date);
     const end = F.endDate.value || F.date.value;
@@ -1937,6 +2067,279 @@ window.addEventListener('offline', () => { if (sync.st.connected) setStatus('off
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') runSync(); });
 setInterval(() => { if (document.visibilityState === 'visible' && tokenOk()) runSync(); }, 3 * 60000);
 
+/* =====================================================================
+   TIEMPO (Open-Meteo: gratuito, sin clave y sin registro)
+   Solo se envían las coordenadas de la localidad elegida, nada de los datos del calendario.
+   ===================================================================== */
+const WX_KEY = `${CLAVE_DATOS}.tiempo`;
+const WX_MAX_AGE = 60 * 60000; // la predicción se actualiza como mucho cada hora
+const WX_CODES = {
+  0: ['☀️', 'Despejado'], 1: ['🌤️', 'Poco nuboso'], 2: ['⛅', 'Parcialmente nuboso'], 3: ['☁️', 'Nublado'],
+  45: ['🌫️', 'Niebla'], 48: ['🌫️', 'Niebla con escarcha'],
+  51: ['🌦️', 'Llovizna débil'], 53: ['🌦️', 'Llovizna'], 55: ['🌧️', 'Llovizna intensa'], 56: ['🌧️', 'Llovizna helada'], 57: ['🌧️', 'Llovizna helada'],
+  61: ['🌦️', 'Lluvia débil'], 63: ['🌧️', 'Lluvia'], 65: ['🌧️', 'Lluvia fuerte'], 66: ['🌧️', 'Lluvia helada'], 67: ['🌧️', 'Lluvia helada'],
+  71: ['🌨️', 'Nieve débil'], 73: ['🌨️', 'Nieve'], 75: ['❄️', 'Nieve fuerte'], 77: ['🌨️', 'Granizo fino'],
+  80: ['🌦️', 'Chubascos débiles'], 81: ['🌧️', 'Chubascos'], 82: ['⛈️', 'Chubascos fuertes'], 85: ['🌨️', 'Chubascos de nieve'], 86: ['❄️', 'Chubascos de nieve'],
+  95: ['⛈️', 'Tormenta'], 96: ['⛈️', 'Tormenta con granizo'], 99: ['⛈️', 'Tormenta con granizo'],
+};
+const num = v => typeof v === 'number' && isFinite(v);
+const wxInfo = c => (Object.prototype.hasOwnProperty.call(WX_CODES, c) ? WX_CODES[c] : ['🌡️', 'Sin datos']);
+const temp = v => (num(v) ? `${Math.round(v)}°` : '–');
+const pct = v => (num(v) ? `${Math.round(v)}%` : '–');
+const validPlace = p => !!p && typeof p.name === 'string' && p.name.length > 0 && p.name.length <= 100
+  && typeof p.admin === 'string' && p.admin.length <= 150
+  && num(p.lat) && Math.abs(p.lat) <= 90 && num(p.lon) && Math.abs(p.lon) <= 180;
+const wxDlg = document.getElementById('wxDlg');
+const wx = { place: null, fc: null, loading: false, err: '', results: [] };
+try {
+  const s = JSON.parse(localStorage.getItem(WX_KEY) || '{}');
+  if (validPlace(s.place)) wx.place = s.place;
+  if (s.fc && typeof s.fc === 'object' && num(s.fc.at) && s.fc.days && s.fc.hours) wx.fc = s.fc;
+} catch {}
+const saveWx = () => { try { localStorage.setItem(WX_KEY, JSON.stringify({ place: wx.place, fc: wx.fc })); } catch {} };
+
+// Se queda solo con números y fechas: nada de lo que llegue se mete tal cual en la página
+function parseForecast(j, place) {
+  const d = j && j.daily, h = j && j.hourly;
+  if (!d || !h || !Array.isArray(d.time) || !Array.isArray(h.time)) throw new Error('respuesta no válida');
+  const pick = (a, i) => (Array.isArray(a) && num(a[i]) ? a[i] : null);
+  const fc = { at: Date.now(), lat: place.lat, lon: place.lon, days: {}, hours: {} };
+  d.time.forEach((t, i) => {
+    if (realDate(t)) fc.days[t] = { code: pick(d.weather_code, i), max: pick(d.temperature_2m_max, i), min: pick(d.temperature_2m_min, i), rain: pick(d.precipitation_probability_max, i) };
+  });
+  h.time.forEach((t, i) => {
+    // En el día del cambio de hora de octubre las 02:00 salen dos veces: se usa la primera
+    if (typeof t === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:00$/.test(t) && !fc.hours[t.slice(0, 13)]) {
+      fc.hours[t.slice(0, 13)] = { t: pick(h.temperature_2m, i), code: pick(h.weather_code, i), rain: pick(h.precipitation_probability, i) };
+    }
+  });
+  return fc;
+}
+
+async function fetchWeather(force) {
+  if (!wx.place || wx.loading || !navigator.onLine) return;
+  const fresh = wx.fc && wx.fc.lat === wx.place.lat && wx.fc.lon === wx.place.lon && Date.now() - wx.fc.at < WX_MAX_AGE;
+  if (fresh && !force) return;
+  wx.loading = true;
+  try {
+    const p = new URLSearchParams({
+      latitude: wx.place.lat, longitude: wx.place.lon, timezone: TZ, forecast_days: 7,
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+      hourly: 'temperature_2m,weather_code,precipitation_probability',
+    });
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (!res.ok) throw new Error(String(res.status));
+    wx.fc = parseForecast(await res.json(), wx.place);
+    wx.err = '';
+    saveWx();
+  } catch {
+    wx.err = 'No se ha podido cargar el tiempo. Se volverá a intentar más tarde.';
+  } finally {
+    wx.loading = false;
+    refreshView();
+  }
+}
+
+async function searchPlaces(q) {
+  const p = new URLSearchParams({ name: q, count: 6, language: 'es', format: 'json' });
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${p}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+  if (!res.ok) throw new Error(String(res.status));
+  const j = await res.json();
+  return (Array.isArray(j.results) ? j.results : []).map(r => ({
+    name: str(r.name, 100),
+    admin: [r.admin2, r.admin1, r.country].filter(x => typeof x === 'string' && x).join(', ').slice(0, 150),
+    lat: r.latitude, lon: r.longitude,
+  })).filter(validPlace);
+}
+
+// Franja con los próximos 7 días (debajo de las vistas Año, Mes y Semana)
+function weatherStrip() {
+  if (!wx.place) {
+    return `<section class="wx"><div class="wx-head"><b>Tiempo</b><button class="btn sm" data-wx="place">📍 Elegir localidad</button></div>
+      <p class="sub" style="margin:0">Elige una localidad para ver la predicción de los próximos 7 días.</p></section>`;
+  }
+  const today = madridNow().date;
+  let cards = '';
+  for (let i = 0; i < 7; i++) {
+    const dt = addDays(today, i), d = wx.fc && wx.fc.days[key(dt)];
+    if (!d) continue;
+    const [icon, text] = wxInfo(d.code);
+    cards += `<button class="wx-day" data-go="day|${key(dt)}" title="${esc(text)}">
+      <span class="wx-d">${i === 0 ? 'Hoy' : cap(DIAS[dow(dt)].slice(0, 3))} ${dt.getUTCDate()}</span>
+      <span class="wx-i">${icon}</span>
+      <span class="wx-t"><b>${temp(d.max)}</b> ${temp(d.min)}</span>
+      <span class="wx-r">💧 ${pct(d.rain)}</span></button>`;
+  }
+  const status = wx.loading ? 'Cargando la predicción…' : (wx.err || 'Sin datos todavía.');
+  const updated = wx.fc ? ` · actualizado a las ${new Date(wx.fc.at).toLocaleTimeString('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })}` : '';
+  return `<section class="wx"><div class="wx-head"><b>Tiempo en ${esc(wx.place.name)}</b><button class="btn sm" data-wx="place">📍 Cambiar</button></div>
+    ${cards ? `<div class="wx-days">${cards}</div>` : `<p class="sub" style="margin:0">${esc(status)}</p>`}
+    <p class="wx-src">Datos: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>${updated}</p></section>`;
+}
+
+// Vista Día: resumen arriba y la previsión de cada hora a la derecha
+function wxDayBanner(dt) {
+  const d = wx.place && wx.fc && wx.fc.days[key(dt)];
+  if (!d) return '';
+  const [icon, text] = wxInfo(d.code);
+  return `<div class="banner wxb">${icon} <b>${esc(text)}</b> · máx. ${temp(d.max)} · mín. ${temp(d.min)} · 💧 ${pct(d.rain)} · ${esc(wx.place.name)}
+    <p>La previsión de cada hora aparece a la derecha de la franja horaria.</p></div>`;
+}
+function wxHour(dt, s) {
+  const h = !s.repeat && wx.place && wx.fc && wx.fc.hours[`${key(dt)}T${pad(s.h)}`];
+  if (!h) return '';
+  const [icon, text] = wxInfo(h.code);
+  return `<span class="wx-h" title="${esc(text)}">${icon} ${temp(h.t)}${num(h.rain) && h.rain >= 10 ? ` · 💧${Math.round(h.rain)}%` : ''}</span>`;
+}
+
+function renderWxResults(msg) {
+  const box = document.getElementById('wxResults');
+  box.innerHTML = msg ? `<p class="sub" style="margin:0">${esc(msg)}</p>`
+    : wx.results.map((r, i) => `<button type="button" data-i="${i}"><b>${esc(r.name)}</b><br><span class="sub">${esc(r.admin)}</span></button>`).join('');
+}
+function openWxDlg() {
+  wx.results = [];
+  renderWxResults(wx.place ? `Ahora: ${wx.place.name}${wx.place.admin ? ` (${wx.place.admin})` : ''}` : '');
+  document.getElementById('wxRemove').hidden = !wx.place;
+  wxDlg.showModal();
+  wxDlg.querySelector('input[name=q]').focus();
+}
+main.addEventListener('click', e => { if (e.target.closest('[data-wx]')) openWxDlg(); });
+document.getElementById('wxForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = e.target.elements.q.value.trim();
+  if (q.length < 2) return renderWxResults('Escribe al menos 2 letras.');
+  renderWxResults('Buscando…');
+  try {
+    wx.results = await searchPlaces(q);
+    renderWxResults(wx.results.length ? '' : 'No se ha encontrado ninguna localidad con ese nombre.');
+  } catch {
+    renderWxResults('No se ha podido buscar. Comprueba la conexión a internet.');
+  }
+});
+document.getElementById('wxResults').addEventListener('click', e => {
+  const b = e.target.closest('[data-i]');
+  const r = b && wx.results[+b.dataset.i];
+  if (!r) return;
+  wx.place = r;
+  wx.fc = null;
+  wx.err = '';
+  saveWx();
+  wxDlg.close();
+  render({ keepScroll: true });
+  fetchWeather(true);
+});
+document.getElementById('wxRemove').onclick = () => {
+  wx.place = null;
+  wx.fc = null;
+  saveWx();
+  wxDlg.close();
+  render({ keepScroll: true });
+};
+document.getElementById('wxClose').onclick = () => wxDlg.close();
+setInterval(() => fetchWeather(false), 10 * 60000);
+window.addEventListener('online', () => fetchWeather(false));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchWeather(false); });
+
+/* =====================================================================
+   AVISOS (notificaciones)
+   Se activan en cada dispositivo con la campana, y en cada elemento con «Avisarme cuando empiece».
+   Sin un servidor, el navegador solo puede avisar mientras la app está abierta o en segundo plano.
+   ===================================================================== */
+const NOTIF_KEY = `${CLAVE_DATOS}.avisos`;
+const BDAY_NOTIFY_MIN = 9 * 60; // los cumpleaños avisan a las 09:00
+const notifBtn = document.getElementById('notifBtn');
+const notifDlg = document.getElementById('notifDlg');
+const notifSupported = () => 'Notification' in window;
+const notif = { on: false, sent: {} };
+try {
+  const s = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}');
+  notif.on = s.on === true;
+  notif.sent = s.sent && typeof s.sent === 'object' ? s.sent : {};
+} catch {}
+const saveNotif = () => { try { localStorage.setItem(NOTIF_KEY, JSON.stringify(notif)); } catch {} };
+const notifActive = () => notif.on && notifSupported() && Notification.permission === 'granted';
+
+function updateNotifBtn() {
+  notifBtn.dataset.on = notifActive() ? 'on' : 'off';
+  notifBtn.title = notifActive() ? 'Avisos activados' : 'Avisos desactivados';
+}
+
+// Lo que empieza ese día y tiene el aviso marcado: { key, at (minuto del día), title, body }
+function dueOn(dt) {
+  const out = [];
+  for (const g of segmentsFor(dt)) {
+    if (!g.item.notify || g.contStart || isDone(g)) continue;
+    out.push({ key: `${g.item.id}|${g.absS}`, at: g.s, title: g.item.title, body: `${g.kind === 'task' ? 'Tarea' : 'Rutina'} · ${rangeLabel(g)}` });
+  }
+  for (const b of birthdaysOf(dt)) {
+    if (b.notify) out.push({ key: `${b.id}|${key(dt)}`, at: BDAY_NOTIFY_MIN, title: `🎂 Cumpleaños de ${b.title}`, body: 'Hoy es su cumpleaños' });
+  }
+  return out;
+}
+
+async function showNotif(title, body, tag) {
+  // «tag» evita avisos repetidos si la app está abierta en varias pestañas
+  const opts = { body, tag, icon: 'icon-192.png', badge: 'icon-192.png' };
+  try {
+    const reg = 'serviceWorker' in navigator && location.protocol !== 'file:' && await navigator.serviceWorker.getRegistration();
+    if (reg) return await reg.showNotification(title, opts);
+  } catch {}
+  try { new Notification(title, opts); } catch {}
+}
+
+// Avisa de lo que ha empezado en los últimos 10 minutos y aún no se ha avisado
+async function checkNotifications() {
+  updateNotifBtn();
+  if (!notifActive()) return;
+  const n = madridNow(), nowMin = n.h * 60 + n.mi;
+  // Justo después de medianoche también se mira el final del día anterior (p. ej. algo a las 23:55)
+  const yesterday = nowMin < 10 ? dueOn(addDays(n.date, -1)).map(x => ({ ...x, at: x.at - 1440 })) : [];
+  const due = [...dueOn(n.date), ...yesterday].filter(x => x.at <= nowMin && x.at > nowMin - 10 && !notif.sent[x.key]);
+  if (!due.length) return;
+  for (const x of due) {
+    notif.sent[x.key] = Date.now();
+    await showNotif(x.title, x.body, x.key);
+  }
+  const limit = Date.now() - 2 * DAY;
+  for (const [k, t] of Object.entries(notif.sent)) if (!(t > limit)) delete notif.sent[k];
+  saveNotif();
+}
+
+function renderNotifPanel() {
+  const body = document.getElementById('notifBody');
+  if (!notifSupported()) {
+    body.innerHTML = '<p>Este navegador no permite notificaciones. En el iPhone solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o posterior).</p>';
+    return;
+  }
+  const count = Object.values(COLLECTION).reduce((n, c) => n + data[c].filter(x => x.notify).length, 0);
+  body.innerHTML = `
+    <label class="check"><input type="checkbox" id="notifToggle" ${notif.on ? 'checked' : ''}>
+      <span>Activar avisos en este dispositivo<small>Avisa a la hora en que empieza cada tarea, rutina o cumpleaños que tenga marcado «Avisarme cuando empiece». Los cumpleaños avisan a las 09:00.</small></span></label>
+    ${Notification.permission === 'denied' ? '<p class="msg">El navegador tiene bloqueadas las notificaciones de esta página. Permítelas en los ajustes del sitio (el icono junto a la dirección) y vuelve a activar los avisos.</p>' : ''}
+    <p class="sub">Elementos con aviso: <b>${count}</b>. Elige cuáles al crear o editar cada uno.</p>
+    <p class="sub"><b>Importante:</b> sin un servidor propio, los avisos llegan mientras la app está abierta o en segundo plano. En el ordenador basta con tener la pestaña abierta; en el móvil, si el sistema cierra la app, no avisará hasta que la vuelvas a abrir.</p>
+    <div class="btns"><button class="btn" id="notifTest" ${notifActive() ? '' : 'disabled'}>Probar aviso</button></div>`;
+}
+
+notifBtn.onclick = () => { renderNotifPanel(); notifDlg.showModal(); };
+document.getElementById('notifClose').onclick = () => notifDlg.close();
+document.getElementById('notifBody').addEventListener('change', async e => {
+  if (e.target.id !== 'notifToggle') return;
+  if (e.target.checked) {
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    notif.on = perm === 'granted';
+  } else notif.on = false;
+  saveNotif();
+  renderNotifPanel();
+  checkNotifications();
+});
+document.getElementById('notifBody').addEventListener('click', e => {
+  if (e.target.id === 'notifTest') showNotif('Prueba de aviso', 'Así te llegarán los avisos del calendario', 'prueba');
+});
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkNotifications(); });
+setInterval(checkNotifications, 30000);
+
 /* ---------- App instalable y uso sin conexión ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1958,6 +2361,8 @@ render();
 tick();
 setInterval(tick, 1000);
 initSync();
+checkNotifications();
+fetchWeather(false);
 </script>
 </body>
 </html>
