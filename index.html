@@ -315,7 +315,20 @@ dialog::backdrop{background:rgba(8,8,10,.5);-webkit-backdrop-filter:blur(3px);ba
 .wx-r{color:var(--muted);font-size:11px;white-space:nowrap}
 .wx-src{margin:8px 0 0;font-size:11px;color:var(--muted)}
 .wx-src a{color:inherit}
-.wx-h{position:absolute;right:6px;top:4px;font-size:11px;color:var(--muted);pointer-events:none;white-space:nowrap}
+/* Vista Año: el tiempo debajo de los meses y la lista de festivos ocupando las dos filas a la derecha */
+.year-wrap{grid-template-rows:auto 1fr}
+.year-wrap > .side{grid-column:2;grid-row:1 / span 2}
+.year-wrap > .wx{grid-column:1;grid-row:2;margin-top:0}
+@media (max-width:900px){
+  .year-wrap{grid-template-rows:none}
+  .year-wrap > .side,.year-wrap > .wx{grid-column:auto;grid-row:auto}
+}
+/* Vista Día: la previsión de cada hora junto a la hora, a la izquierda */
+.day .tg{grid-template-columns:118px 1fr}
+.day .tlabel{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;padding:2px 8px;line-height:1.15}
+.day .tlabel .tz{font-size:9.5px}
+.wx-l{font-size:12px;color:var(--text);white-space:nowrap}
+.views .vs{display:none}
 .banner.wxb{background:var(--accent-soft);color:var(--text)}
 .wx-search{display:flex;gap:8px}
 .wx-search input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);font-size:15px}
@@ -345,12 +358,20 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
 /* ---------- Móvil ---------- */
 @media (max-width:700px){
   body{font-size:15px}
-  header{gap:8px;padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left))}
-  .nav{order:1}
-  #title{order:2;flex:1;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #syncBtn,#notifBtn{order:3}
-  .views{order:4;width:100%}
-  .views button{flex:1;padding:8px 2px}
+  /* Sin desenfoque en el móvil: con él, el botón «+» se colocaba dentro de la cabecera en vez de abajo */
+  header{gap:8px 6px;padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface)}
+  /* Fila 1: título · Hoy · campana · nube   —   Fila 2: ‹ vistas › */
+  .nav{display:contents}
+  #title{order:1;flex:1 1 0;min-width:0;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #today{order:2}
+  #notifBtn,#syncBtn{order:3}
+  header::after{content:"";order:4;flex-basis:100%;height:0}
+  #prev{order:5}
+  .views{order:6;flex:1 1 0;min-width:0;margin:0}
+  #next{order:7}
+  .views button{flex:1 1 0;min-width:0;padding:8px 0;font-size:13px}
+  .views .vl{display:none}
+  .views .vs{display:inline}
   .clock{display:none}
   .btn{padding:8px 14px}
   .btn.icon{padding:8px 12px}
@@ -380,8 +401,16 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
   .tg-head.corner{font-size:0}
   .tlabel{padding-right:4px;font-size:10px}
   .day .timegrid{max-height:none;overflow:visible}
-  .day .tg{grid-template-columns:70px 1fr}
-  .day .tlabel{padding:4px 6px;font-size:10px}
+  .day .tg{grid-template-columns:78px 1fr}
+  .day .tlabel{padding:2px 5px;font-size:10px}
+  .day .tlabel .tz{font-size:9px}
+  .ev input[data-toggle]{width:16px;height:16px}
+  .wx{padding:10px}
+  .wx-days{grid-template-columns:repeat(7,minmax(54px,1fr));gap:6px}
+  .wx-day{padding:6px 2px}
+  .wx-i{font-size:20px}
+  .wx-head .btn{padding:6px 10px}
+  .wx-search input{font-size:16px}
   .ev{padding:2px 4px;font-size:10px}
   .ev b{font-size:11px}
   .side{padding:12px}
@@ -425,7 +454,7 @@ button,.mcell,.slot,.tg-head{touch-action:manipulation}
   <div class="views" role="group" aria-label="Vista">
     <button data-view="year" title="Año (A)">Año</button>
     <button data-view="month" title="Mes (M)">Mes</button>
-    <button data-view="week" title="Semana (S)">Semana</button>
+    <button data-view="week" title="Semana (S)"><span class="vl">Semana</span><span class="vs">Sem.</span></button>
     <button data-view="day" title="Día (D)">Día</button>
     <button data-view="list" title="Lista (L)">Lista</button>
   </div>
@@ -1109,7 +1138,7 @@ function renderWeek(now) {
   const sameMonth = monday.getUTCMonth() === sunday.getUTCMonth();
   titleEl.textContent = (sameMonth
     ? `${monday.getUTCDate()} – ${sunday.getUTCDate()} ${MESES[sunday.getUTCMonth()]}`
-    : `${shortDate(monday)} – ${shortDate(sunday)}`) + ` ${sunday.getUTCFullYear()} · Semana ${isoWeek(monday)}`;
+    : `${shortDate(monday)} – ${shortDate(sunday)}`) + (isNarrow() ? '' : ` ${sunday.getUTCFullYear()} · Semana ${isoWeek(monday)}`);
 
   let head = `<div class="tg-head corner">Hora peninsular</div>`;
   let cols = '';
@@ -1163,7 +1192,7 @@ function dayRowToMin(dt) {
 
 function renderDay(now) {
   const dt = state.cursor;
-  titleEl.textContent = cap(longDate(dt));
+  titleEl.textContent = isNarrow() ? `${cap(DIAS[dow(dt)].slice(0, 3))} ${shortDate(dt)} ${dt.getUTCFullYear()}` : cap(longDate(dt));
   const hs = holidaysOf(dt), fs = festivosOf(dt), z = dayZone(dt), slots = hourSlots(dt);
   const isToday = same(dt, now.date);
   const curIdx = isToday ? slots.findIndex(s => s.h === now.h && s.zone === now.zone) : -1;
@@ -1184,11 +1213,11 @@ function renderDay(now) {
   let times = '', rows = '';
   slots.forEach((s, i) => {
     const cur = i === curIdx ? ' cur' : '';
-    times += `<div class="tlabel${cur}"><b>${pad(s.h)}:00</b>${s.zone} · ${OFFSET[s.zone]}</div>`;
+    times += `<div class="tlabel${cur}"><b>${pad(s.h)}:00</b><span class="tz">${s.zone} · ${OFFSET[s.zone]}</span>${wxHour(dt, s)}</div>`;
     const c = ['slot'];
     if (s.h < 7 || s.h >= 22) c.push('night');
     if (s.repeat) c.push('repeat');
-    rows += `<div class="${c.join(' ')}${cur}" data-slot="${key(dt)}|${s.h * 60}">${s.note ? `<span class="slot-note">${s.note}</span>` : ''}${wxHour(dt, s)}</div>`;
+    rows += `<div class="${c.join(' ')}${cur}" data-slot="${key(dt)}|${s.h * 60}">${s.note ? `<span class="slot-note">${s.note}</span>` : ''}</div>`;
   });
   const evs = layout(segs.filter(g => !isAllDay(g))).map(g => evHTML(g, dayRowPos(dt))).join('');
   const line = curIdx >= 0 ? `<div class="nowline" style="top:calc(var(--row) * ${curIdx + now.mi / 60})"></div>` : '';
@@ -1277,7 +1306,7 @@ function birthdayItem(b) {
 }
 
 function renderList() {
-  titleEl.textContent = 'Tareas, rutinas, festivos y cumpleaños';
+  titleEl.textContent = isNarrow() ? 'Lista' : 'Tareas, rutinas, festivos y cumpleaños';
   const byWhen = (a, b) => (a.date + a.time).localeCompare(b.date + b.time);
   const pending = data.tasks.filter(t => !t.done).sort(byWhen);
   const done = data.tasks.filter(t => t.done).sort(byWhen);
@@ -1319,6 +1348,9 @@ function renderList() {
 }
 
 /* ---------- Render y navegación ---------- */
+const isNarrow = () => matchMedia('(max-width:700px)').matches;
+// Al girar el móvil (o cambiar el tamaño de la ventana) se ajustan los títulos
+matchMedia('(max-width:700px)').addEventListener('change', () => refreshView());
 const renderers = { year: renderYear, month: renderMonth, week: renderWeek, day: renderDay, list: renderList };
 const rowPx = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row')) || 48;
 
@@ -1348,7 +1380,9 @@ function render({ keepScroll = false } = {}) {
   const prevScroll = keepScroll && sc ? sc.scrollTop : null;
   const prevMain = keepScroll ? main.scrollTop : 0;
   renderers[state.view](now);
-  if (['year', 'month', 'week'].includes(state.view)) main.insertAdjacentHTML('beforeend', weatherStrip());
+  // En la vista Año va justo debajo de los meses (no debajo de la lista de festivos)
+  if (state.view === 'year') main.querySelector('.year').insertAdjacentHTML('afterend', weatherStrip());
+  else if (['month', 'week'].includes(state.view)) main.insertAdjacentHTML('beforeend', weatherStrip());
   document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === state.view));
   document.getElementById('prev').disabled = !canStep(-1);
   document.getElementById('next').disabled = !canStep(1);
@@ -2097,6 +2131,8 @@ try {
   if (s.fc && typeof s.fc === 'object' && num(s.fc.at) && s.fc.days && s.fc.hours) wx.fc = s.fc;
 } catch {}
 const saveWx = () => { try { localStorage.setItem(WX_KEY, JSON.stringify({ place: wx.place, fc: wx.fc })); } catch {} };
+// La predicción guardada solo vale si es de la localidad elegida ahora
+const wxData = () => (wx.place && wx.fc && wx.fc.lat === wx.place.lat && wx.fc.lon === wx.place.lon ? wx.fc : null);
 
 // Se queda solo con números y fechas: nada de lo que llegue se mete tal cual en la página
 function parseForecast(j, place) {
@@ -2121,22 +2157,24 @@ async function fetchWeather(force) {
   const fresh = wx.fc && wx.fc.lat === wx.place.lat && wx.fc.lon === wx.place.lon && Date.now() - wx.fc.at < WX_MAX_AGE;
   if (fresh && !force) return;
   wx.loading = true;
+  const place = wx.place;
   try {
     const p = new URLSearchParams({
-      latitude: wx.place.lat, longitude: wx.place.lon, timezone: TZ, forecast_days: 7,
+      latitude: place.lat, longitude: place.lon, timezone: TZ, forecast_days: 7,
       daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
       hourly: 'temperature_2m,weather_code,precipitation_probability',
     });
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { credentials: 'omit', referrerPolicy: 'no-referrer' });
     if (!res.ok) throw new Error(String(res.status));
-    wx.fc = parseForecast(await res.json(), wx.place);
-    wx.err = '';
-    saveWx();
+    const fc = parseForecast(await res.json(), place);
+    if (wx.place === place) { wx.fc = fc; wx.err = ''; saveWx(); }
   } catch {
-    wx.err = 'No se ha podido cargar el tiempo. Se volverá a intentar más tarde.';
+    if (wx.place === place) wx.err = 'No se ha podido cargar el tiempo. Se volverá a intentar más tarde.';
   } finally {
     wx.loading = false;
-    refreshView();
+    // Si mientras tanto se eligió otra localidad, se descarga la suya
+    if (wx.place && wx.place !== place) fetchWeather(true);
+    else refreshView();
   }
 }
 
@@ -2158,10 +2196,10 @@ function weatherStrip() {
     return `<section class="wx"><div class="wx-head"><b>Tiempo</b><button class="btn sm" data-wx="place">📍 Elegir localidad</button></div>
       <p class="sub" style="margin:0">Elige una localidad para ver la predicción de los próximos 7 días.</p></section>`;
   }
-  const today = madridNow().date;
+  const today = madridNow().date, fc = wxData();
   let cards = '';
   for (let i = 0; i < 7; i++) {
-    const dt = addDays(today, i), d = wx.fc && wx.fc.days[key(dt)];
+    const dt = addDays(today, i), d = fc && fc.days[key(dt)];
     if (!d) continue;
     const [icon, text] = wxInfo(d.code);
     cards += `<button class="wx-day" data-go="day|${key(dt)}" title="${esc(text)}">
@@ -2171,7 +2209,7 @@ function weatherStrip() {
       <span class="wx-r">💧 ${pct(d.rain)}</span></button>`;
   }
   const status = wx.loading ? 'Cargando la predicción…' : (wx.err || 'Sin datos todavía.');
-  const updated = wx.fc ? ` · actualizado a las ${new Date(wx.fc.at).toLocaleTimeString('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })}` : '';
+  const updated = fc ? ` · actualizado a las ${new Date(fc.at).toLocaleTimeString('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })}` : '';
   return `<section class="wx"><div class="wx-head"><b>Tiempo en ${esc(wx.place.name)}</b><button class="btn sm" data-wx="place">📍 Cambiar</button></div>
     ${cards ? `<div class="wx-days">${cards}</div>` : `<p class="sub" style="margin:0">${esc(status)}</p>`}
     <p class="wx-src">Datos: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>${updated}</p></section>`;
@@ -2179,17 +2217,18 @@ function weatherStrip() {
 
 // Vista Día: resumen arriba y la previsión de cada hora a la derecha
 function wxDayBanner(dt) {
-  const d = wx.place && wx.fc && wx.fc.days[key(dt)];
+  const fc = wxData(), d = fc && fc.days[key(dt)];
   if (!d) return '';
   const [icon, text] = wxInfo(d.code);
   return `<div class="banner wxb">${icon} <b>${esc(text)}</b> · máx. ${temp(d.max)} · mín. ${temp(d.min)} · 💧 ${pct(d.rain)} · ${esc(wx.place.name)}
-    <p>La previsión de cada hora aparece a la derecha de la franja horaria.</p></div>`;
+    <p>La previsión de cada hora aparece junto a la hora, a la izquierda.</p></div>`;
 }
 function wxHour(dt, s) {
-  const h = !s.repeat && wx.place && wx.fc && wx.fc.hours[`${key(dt)}T${pad(s.h)}`];
+  const fc = wxData(), h = !s.repeat && fc && fc.hours[`${key(dt)}T${pad(s.h)}`];
   if (!h) return '';
   const [icon, text] = wxInfo(h.code);
-  return `<span class="wx-h" title="${esc(text)}">${icon} ${temp(h.t)}${num(h.rain) && h.rain >= 10 ? ` · 💧${Math.round(h.rain)}%` : ''}</span>`;
+  const tip = `${text}${num(h.rain) ? ` · probabilidad de lluvia ${Math.round(h.rain)}%` : ''}`;
+  return `<span class="wx-l" title="${esc(tip)}">${icon} ${temp(h.t)}</span>`;
 }
 
 function renderWxResults(msg) {
@@ -2297,10 +2336,11 @@ async function checkNotifications() {
   const yesterday = nowMin < 10 ? dueOn(addDays(n.date, -1)).map(x => ({ ...x, at: x.at - 1440 })) : [];
   const due = [...dueOn(n.date), ...yesterday].filter(x => x.at <= nowMin && x.at > nowMin - 10 && !notif.sent[x.key]);
   if (!due.length) return;
-  for (const x of due) {
-    notif.sent[x.key] = Date.now();
-    await showNotif(x.title, x.body, x.key);
-  }
+  // Se marcan todos como avisados antes de mostrar ninguno: si otra comprobación coincide
+  // en el tiempo, ya no los repite
+  for (const x of due) notif.sent[x.key] = Date.now();
+  saveNotif();
+  for (const x of due) await showNotif(x.title, x.body, x.key);
   const limit = Date.now() - 2 * DAY;
   for (const [k, t] of Object.entries(notif.sent)) if (!(t > limit)) delete notif.sent[k];
   saveNotif();
